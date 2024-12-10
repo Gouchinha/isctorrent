@@ -1,0 +1,16 @@
+# Ignorar ficheiros compilados
+*.class
+
+# Ignorar pastas de saída padrão
+bin/
+build/
+
+# Ignorar ficheiros gerados por IDEs
+*.log
+*.swp
+.vscode/
+.idea/
+*.iml
+
+# Ignorar outros ficheiros temporários
+*.tmp
