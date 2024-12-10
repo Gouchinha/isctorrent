@@ -2,13 +2,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SearchGUI extends JFrame {
     private JTextField searchField, addressField, portField;
     private JButton searchButton, downloadButton, connectButton;
     private JList<String> resultList;
-    private DefaultListModel<String> listModel;
+    private DefaultListModel<FileSearchResult> listModel;
     private FileNode fileNode; // Referência para o nó
 
     public SearchGUI(FileNode fileNodeObject) {
@@ -17,10 +19,10 @@ public class SearchGUI extends JFrame {
         setSize(500, 350);
         setLocationRelativeTo(null);
 
-        listModel = new DefaultListModel<>();
+        listModel = new DefaultListModel<FileSearchResult>();
         this.fileNode = fileNodeObject;
 
-        resultList = new JList<>(listModel);
+        resultList = new JList<>();
         JScrollPane listScrollPane = new JScrollPane(resultList);
 
         // Painel de pesquisa
@@ -50,17 +52,17 @@ public class SearchGUI extends JFrame {
                 String searchText = searchField.getText();
                 // Envia a procura para os nós conectados
                 fileNode.sendWordSearchRequest(searchText);
-                JOptionPane.showMessageDialog(null, "Pesquisa por: " + searchText);
             }
         });
 
         downloadButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String selected = resultList.getSelectedValue();
+                int selectedIndex = resultList.getSelectedIndex();
+                FileSearchResult selected = selectedIndex != -1 ? listModel.getElementAt(selectedIndex) : null;
                 if (selected != null) {
                     // Aqui pode-se iniciar o download, que seria implementado após a transferência
                     // de ficheiro
-                    JOptionPane.showMessageDialog(null, "Descarregar: " + selected);
+                    JOptionPane.showMessageDialog(null, "Descarregar: " + selected.getFileName());
                 } else {
                     JOptionPane.showMessageDialog(null, "Nenhum ficheiro selecionado!");
                 }
@@ -135,10 +137,38 @@ public class SearchGUI extends JFrame {
 
     // Método para atualizar a lista de resultados de pesquisa
     public void updateSearchResults(List<FileSearchResult> results) {
-        listModel.clear();
+    listModel.clear(); // Limpa os resultados anteriores
+    
+    if (results.isEmpty()) {
+        // JOptionPane.showMessageDialog(this, "Nenhum resultado encontrado!");
+    } else {
+        // Map para filtrar elementos únicos por hash e nome
+        Map<String, FileSearchResult> filteredResults = new HashMap<>();
         for (FileSearchResult result : results) {
-            listModel.addElement(result.getFileName() + " (Hash: " + result.getFileHash() + ")");
+            String key = result.getFileHash() + ":" + result.getFileName(); // Combinação de hash e nome como chave
+            if (!filteredResults.containsKey(key)) {
+                filteredResults.put(key, result); // Adiciona ao mapa apenas se ainda não existir
+            }
         }
-        resultList.setModel(listModel);
+
+        // Adiciona os resultados filtrados ao listModel
+        for (FileSearchResult result : filteredResults.values()) {
+            listModel.addElement(result);
+        }
     }
+
+    // Atualiza o modelo da lista
+    resultList.setModel(new AbstractListModel<String>() {
+        @Override
+        public int getSize() {
+            return listModel.getSize();
+        }
+
+        @Override
+        public String getElementAt(int index) {
+            return listModel.getElementAt(index).getFileName();
+        }
+    });
+}
+
 }
