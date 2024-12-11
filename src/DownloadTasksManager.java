@@ -32,6 +32,10 @@ public class DownloadTasksManager {
     public List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
     }
+    
+    public String getDownloadDirectory() {
+        return downloadDirectory;
+    }
 
     public synchronized FileBlockRequestMessage getNextBlockRequest() {
         if (!blockRequests.isEmpty()) {
@@ -40,7 +44,16 @@ public class DownloadTasksManager {
         return null;
     }
 
-    public File getFileByHashInDirectory(byte[] fileHash) {
+    public File getFileByHashInDirectory(byte[] fileHash, String directoryPath) {
+        File directory = new File(directoryPath);
+        File[] files = directory.listFiles();
+        for (File file : files) {
+            byte[] hash = File_Hash.calculateHash(file);
+            if (hash != null && Arrays.equals(hash, fileHash)) {
+                return file;
+            }
+        }
+        return null;
         
     }
 

@@ -1,5 +1,7 @@
 import java.util.List;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.io.File;
 
 
 public class SendDownloadThread extends Thread {
@@ -19,11 +21,20 @@ public class SendDownloadThread extends Thread {
             requests.add(message.getNextBlockRequest());
         }
 
-        File file = message.getFileByHash(requests.get(0).getFileHash());
+        byte[] fileHash = message.getBlockRequests().get(0).getFileHash();
+        String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
+        File file = message.getFileByHashInDirectory(fileHash, message.getDownloadDirectory());
 
-        for (FileBlockRequestMessage request : requests) {
-            System.out.println("Creating FileBlockAnswer to resquest: " + request);
-            FileBlockAnswerMessage answer = new FileBlockAnswerMessage(request.getFileHash(), request.getOffset(), request.getLength(), new byte[request.getLength()]);
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            for (FileBlockRequestMessage request : requests) {
+                byte[] buffer = new byte[request.getLength()];
+                raf.seek(request.getOffset());
+                raf.readFully(buffer);
+                FileBlockAnswerMessage answer = new FileBlockAnswerMessage(request.getFileHash(), request.getOffset(), buffer);
+                // Process the answer message as needed
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

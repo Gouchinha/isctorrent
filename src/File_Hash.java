@@ -27,12 +27,12 @@ public class File_Hash {
         return file.getName();
     }
 
-    private byte[] calculateHash(File file) throws IOException {
+    public static byte[] calculateHash(File file) throws IOException {
         byte[] fileData = Files.readAllBytes(file.toPath());
         return computeSHA256(fileData);
     }
 
-    private byte[] computeSHA256(byte[] data) {
+    private static byte[] computeSHA256(byte[] data) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return digest.digest(data);

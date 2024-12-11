@@ -151,12 +151,7 @@ public class FileNode {
     }
 
     private void handleReadFileBlockRequest(DownloadTasksManager message) {
-        threadPool.execute(() -> 
-        while(!message.getBlockRequests().isEmpty()) {
-            message.getNextBlockRequest());
-        }
-        System.out.println("Recebido pedido de download de " + message.getFileHash());
-        message.sendFileBlockRequests();
+        threadPool.submit(new SendDownloadThread(message));
     }
 
     private void handleWordSearchRequest(WordSearchMessage message, SocketAndStreams peer) throws IOException {
