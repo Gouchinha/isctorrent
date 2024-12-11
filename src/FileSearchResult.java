@@ -12,7 +12,7 @@ public class FileSearchResult implements Serializable {
     private byte[] fileHash;
     private String nodeAddress;
     private int nodePort;
-    private List<Map<String, Integer>> nodesWithFile;
+    private List<String[]> nodesWithFile;
 
     public FileSearchResult(WordSearchMessage request, String fileName, long fileSize, byte[] fileHash, String nodeAddress, int nodePort) {
         this.request = request;
@@ -21,19 +21,19 @@ public class FileSearchResult implements Serializable {
         this.fileHash = fileHash;
         this.nodeAddress = nodeAddress;
         this.nodePort = nodePort;
-        this.nodesWithFile = new ArrayList<Map<String, Integer>>();
+        this.nodesWithFile = new ArrayList<String[]>();
     }
 
     public WordSearchMessage getRequest() {
         return request;
     }
 
-    public Map<String, Integer> addNodeWithFile(Map<String, Integer> node) {
+    public String[] addNodeWithFile(String[] node) {
         nodesWithFile.add(node);
         return node;
     }
 
-    public List<Map<String, Integer>> getNodeswithFile() {
+    public List<String[]> getNodeswithFile() {
         return nodesWithFile;
     }
 

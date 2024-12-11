@@ -29,7 +29,7 @@ public class DownloadTasksManager {
         }
     }
 
-    public List<FileBlockRequestMessage> getBlockRequests() {
+    public synchronized List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
     }
     
@@ -48,7 +48,12 @@ public class DownloadTasksManager {
         File directory = new File(directoryPath);
         File[] files = directory.listFiles();
         for (File file : files) {
-            byte[] hash = File_Hash.calculateHash(file);
+            byte[] hash = null;
+            try {
+                hash = File_Hash.calculateHash(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             if (hash != null && Arrays.equals(hash, fileHash)) {
                 return file;
             }
@@ -64,23 +69,41 @@ public class DownloadTasksManager {
 
     public void sendFileBlockRequests(FileSearchResult result) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
         for (SocketAndStreams peer : fileNode.getConnectedPeers()) {
-            for (Map<String, Integer> r : result.getNodeswithFile()) {
-                if (peer.getSocket().getInetAddress() == r.get(result) && peer.getSocket().getPort() == result.getNodePort()) {
+            for (String[] r : result.getNodeswithFile()) {
+                if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
                     fileNode.sendMessage(peer, (Serializable) this);
                 }
             }
          }
-        }
-
-            System.out.println("Peer não encontrado para download: " + result.getNodeAddress() + ":" + result.getNodePort());
     }
 
-    public void writeFileToDisk(String fileName) {
-        
-        
-        
+    public void writeFileToDisk() {
         
         new Thread(() -> {
+            try {
+                latch.await(); // Wait until all blocks have been received
+
+                // Sort the block answers by their offset
+                blockAnswers.sort(Comparator.comparingLong(FileBlockAnswerMessage::getBlockOffset));
+
+                // Create the output file
+                File outputFile = new File(downloadDirectory, "downloaded_file");
+
+                // Write all blocks to the file
+                try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                    for (FileBlockAnswerMessage answer : blockAnswers) {
+                        fos.write(answer.getBlockData()); // Write block data to file
+                    }
+                }
+
+                System.out.println("File written successfully: " + outputFile.getAbsolutePath());
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        
+        
+        /* new Thread(() -> {
             try {
                 latch.await(); // Espera que todos os blocos sejam descarregados
                 File file = new File(downloadDirectory, fileName);
@@ -96,7 +119,7 @@ public class DownloadTasksManager {
             } catch (InterruptedException | IOException e) {
                 e.printStackTrace();
             }
-        }).start();
+        }).start(); */
     }
 }
 

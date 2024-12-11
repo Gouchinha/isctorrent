@@ -2,36 +2,61 @@ import java.util.List;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 
 public class SendDownloadThread extends Thread {
 
     private DownloadTasksManager message;
-    private List<FileBlockRequestMessage> requests;
 
     public SendDownloadThread(DownloadTasksManager message) {
         super();
         this.message = message;
-        this.requests = new ArrayList<>();
     }
 
     @Override
     public void run() {
-        while(!message.getBlockRequests().isEmpty()) {
-            requests.add(message.getNextBlockRequest());
+        // Get all block requests
+        List<FileBlockRequestMessage> requests = message.getBlockRequests();
+
+        if (requests.isEmpty()) {
+            return; // No requests to process
         }
 
-        byte[] fileHash = message.getBlockRequests().get(0).getFileHash();
+        // Get the file hash from the first request
+        byte[] fileHash = requests.get(0).getFileHash();
+        // Get the file to send
         String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
         File file = message.getFileByHashInDirectory(fileHash, message.getDownloadDirectory());
 
+        if (file == null || !file.exists()) {
+            System.err.println("File not found.");
+            return;
+        }
+
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            List<FileBlockAnswerMessage> answers = new ArrayList<>();
+
             for (FileBlockRequestMessage request : requests) {
-                byte[] buffer = new byte[request.getLength()];
-                raf.seek(request.getOffset());
-                raf.readFully(buffer);
-                FileBlockAnswerMessage answer = new FileBlockAnswerMessage(request.getFileHash(), request.getOffset(), buffer);
-                // Process the answer message as needed
+            long offset = request.getOffset();
+            int length = request.getLength();
+
+            // Read the requested block
+            byte[] blockData = new byte[length];
+            raf.seek(offset);
+            int bytesRead = raf.read(blockData, 0, length);
+
+            if (bytesRead == length) {
+                // Create a FileBlockAnswerMessage with the block data
+                FileBlockAnswerMessage answer = new FileBlockAnswerMessage(fileHash, offset, blockData);
+                answers.add(answer);
+            }
+            }
+
+            // Send the answers
+            for (FileBlockAnswerMessage answer : answers) {
+                message.addBlockAnswer(answer);
             }
         } catch (IOException e) {
             e.printStackTrace();
