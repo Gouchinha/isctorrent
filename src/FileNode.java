@@ -9,7 +9,6 @@ public class FileNode {
     private List<SocketAndStreams> connectedPeers;
     private FileLoader fileLoader;
     private SearchGUI gui;
-    private DownloadTasksManager downloadTasksManager;
     private SharedResultList sharedResultList;
 
     public FileNode(int port, String pastaDownload) throws IOException {
@@ -32,6 +31,30 @@ public class FileNode {
 
         // Inicia um thread para receber List<FileSearchResult> e juntar numa nova Lista e atualizar a GUI
         
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public ServerSocket getServerSocket() {
+        return serverSocket;
+    }
+
+    public List<SocketAndStreams> getConnectedPeers() {
+        return connectedPeers;
+    }
+
+    public FileLoader getFileLoader() {
+        return fileLoader;
+    }
+
+    public SearchGUI getGui() {
+        return gui;
+    }
+
+    public SharedResultList getSharedResultList() {
+        return sharedResultList;
     }
 
     private void acceptConnections() {
@@ -132,7 +155,7 @@ public class FileNode {
                         file_Hash.getFile().length(),
                         file_Hash.getHash(),
                         peer.getSocket().getInetAddress().getHostAddress(),
-                        port));
+                        peer.getSocket().getLocalPort()));
             }
         }
         sendMessage(peer, (Serializable) results);
@@ -141,7 +164,15 @@ public class FileNode {
     private void handleFileSearchResult(List<FileSearchResult> results) {
         System.out.println("Resultados da busca recebidos: " + results);
         sharedResultList.add(results);
-        //gui.updateSearchResults(results);
+    }
+
+    public void startDownload(FileSearchResult result) {
+       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), this);
+
+        Thread downloadThread = new Thread(() -> downloadTasksManager.sendFileBlockRequests(result));
+        downloadThread.setName("DownloadThread");
+        downloadThread.start();
+        
     }
 
     public void sendWordSearchRequest(String searchWord) {
@@ -164,7 +195,7 @@ public class FileNode {
         }
     }
 
-    private void sendMessage(SocketAndStreams peer, Serializable message) {
+    protected void sendMessage(SocketAndStreams peer, Serializable message) {
         try {
             peer.getObjectOutputStream().writeObject(message);
             peer.getObjectOutputStream().flush();

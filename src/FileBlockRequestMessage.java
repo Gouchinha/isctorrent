@@ -2,17 +2,17 @@ import java.io.Serializable;
 
 public class FileBlockRequestMessage implements Serializable  {
 
-    private final String fileHash;
+    private final byte[] fileHash;
     private final long offset;
     private final int length;
 
-    public FileBlockRequestMessage(String fileHash, long offset, int length) {
+    public FileBlockRequestMessage(byte[] fileHash, long offset, int length) {
         this.fileHash = fileHash;
         this.offset = offset;
         this.length = length;
     }
 
-    public String getFileHash() {
+    public byte[] getFileHash() {
         return fileHash;
     }
 

@@ -18,6 +18,10 @@ public class SocketAndStreams {
         return socket;
     }
 
+    public int getNodePort() {
+        return socket.getPort();
+    }
+
     public ObjectInputStream getObjectInputStream() {
         return in;
     }

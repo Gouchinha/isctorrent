@@ -3,15 +3,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 public class File_Hash {
 
-    File file;
-    byte[] hash;
+    private File file;
+    private byte[] hash;
 
     public File_Hash(File file) throws IOException {
         this.file = file;
-        this.hash = getHash(getData(file));
+        this.hash = calculateHash(file);
     }
 
     public File getFile() {
@@ -26,18 +27,32 @@ public class File_Hash {
         return file.getName();
     }
 
-    public byte[] getData(File file) throws IOException {
-        byte[] fileContents = Files.readAllBytes(file.toPath());
-        return fileContents;
+    private byte[] calculateHash(File file) throws IOException {
+        byte[] fileData = Files.readAllBytes(file.toPath());
+        return computeSHA256(fileData);
     }
 
-    public byte[] getHash(byte[] fileData) {
+    private byte[] computeSHA256(byte[] data) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            hash = digest.digest(fileData);
+            return digest.digest(data);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new RuntimeException("SHA-256 algorithm not found", e);
         }
-        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        File_Hash fileHash = (File_Hash) obj;
+        return Arrays.equals(hash, fileHash.hash) && file.getName().equals(fileHash.file.getName());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Arrays.hashCode(hash);
+        result = 31 * result + file.getName().hashCode();
+        return result;
     }
 }

@@ -60,6 +60,7 @@ public class SearchGUI extends JFrame {
                 int selectedIndex = resultList.getSelectedIndex();
                 FileSearchResult selected = selectedIndex != -1 ? listModel.getElementAt(selectedIndex) : null;
                 if (selected != null) {
+                    
                     // Aqui pode-se iniciar o download, que seria implementado após a transferência
                     // de ficheiro
                     JOptionPane.showMessageDialog(null, "Descarregar: " + selected.getFileName());
@@ -142,17 +143,17 @@ public class SearchGUI extends JFrame {
     if (results.isEmpty()) {
         // JOptionPane.showMessageDialog(this, "Nenhum resultado encontrado!");
     } else {
-        // Map para filtrar elementos únicos por hash e nome
+        /* // Map para filtrar elementos únicos por hash e nome
         Map<String, FileSearchResult> filteredResults = new HashMap<>();
         for (FileSearchResult result : results) {
             String key = result.getFileHash() + ":" + result.getFileName(); // Combinação de hash e nome como chave
             if (!filteredResults.containsKey(key)) {
                 filteredResults.put(key, result); // Adiciona ao mapa apenas se ainda não existir
             }
-        }
+        } */
 
         // Adiciona os resultados filtrados ao listModel
-        for (FileSearchResult result : filteredResults.values()) {
+        for (FileSearchResult result : results) {
             listModel.addElement(result);
         }
     }
@@ -169,6 +170,6 @@ public class SearchGUI extends JFrame {
             return listModel.getElementAt(index).getFileName();
         }
     });
-}
+    }
 
 }

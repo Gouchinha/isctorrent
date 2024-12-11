@@ -8,6 +8,7 @@ public class FileSearchResult implements Serializable {
     private byte[] fileHash;
     private String nodeAddress;
     private int nodePort;
+    private int numNodes;
 
     public FileSearchResult(WordSearchMessage request, String fileName, long fileSize, byte[] fileHash, String nodeAddress, int nodePort) {
         this.request = request;
@@ -16,10 +17,19 @@ public class FileSearchResult implements Serializable {
         this.fileHash = fileHash;
         this.nodeAddress = nodeAddress;
         this.nodePort = nodePort;
+        this.numNodes = 1;
     }
 
     public WordSearchMessage getRequest() {
         return request;
+    }
+
+    public void incrementFrequency() {
+        numNodes++;
+    }
+
+    public int getNumNodes() {
+        return numNodes;
     }
 
     public String getFileName() {

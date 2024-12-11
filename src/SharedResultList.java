@@ -18,8 +18,19 @@ public class SharedResultList {
     }
 
     public synchronized void add(List<FileSearchResult> result) {
-        results.addAll(result);
+        System.out.println("Adding results to shared list");
+        for (FileSearchResult r : result) {
+            for (FileSearchResult existing : results) {
+                if (r.getFileName().equals(existing.getFileName()) || r.getFileHash().equals(existing.getFileHash())) {
+                    existing.incrementFrequency();
+                    break;
+                } else {
+                    results.add(r);
+                } 
+            }
+        }           
         latch.countDown(); // Decrement the latch count
+        notifyAll(); // Notify any waiting threads
     }
 
     public void clear() {
@@ -27,12 +38,14 @@ public class SharedResultList {
     }
 
     public void waitAndGetResults() throws InterruptedException {
+        System.out.println("Waiting for final results...");
         try {
             latch.await(); // Wait until all peers have responded
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             System.err.println("Thread interrupted: " + e.getMessage());
         }
+        System.out.println("Final Results arrived - " + results);
         gui.updateSearchResults(results);
     }
 }

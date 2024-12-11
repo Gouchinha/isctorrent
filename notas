@@ -24,3 +24,6 @@ Thread para escrita em disco: 1
 Thread para receção de mensagens e Tratamento: N
 Thread para conexão de novos pares: 1
 Thread(s) para operações do utilizador: 1 ou mais
+
+
+Lista não parece (e parace retida porque os hashs de conteudos iguais não estão a ficar iguais)

@@ -4,14 +4,17 @@ import java.util.concurrent.*;
 
 public class DownloadTasksManager {
     private List<FileBlockRequestMessage> blockRequests;
+    private List<FileBlockAnswerMessage> blockAnswers;
     private Map<Long, byte[]> downloadedBlocks; // Armazena os blocos descarregados
     private CountDownLatch latch; // Sincroniza o número de blocos restantes
     private String downloadDirectory; // Diretório de destino do ficheiro
+    private FileNode fileNode;
 
-    public DownloadTasksManager(String fileHash, long fileSize, String downloadDirectory) {
+    public DownloadTasksManager(byte[] fileHash, long fileSize, String downloadDirectory, FileNode fileNode) {
         this.blockRequests = new ArrayList<>();
         this.downloadedBlocks = new ConcurrentHashMap<>();
         this.downloadDirectory = downloadDirectory;
+        this.fileNode = fileNode;
 
         // Divide o ficheiro em blocos
         long blockSize = 10240; // Tamanho padrão do bloco
@@ -33,7 +36,23 @@ public class DownloadTasksManager {
         latch.countDown(); // Indica que um bloco foi descarregado
     }
 
+    public void sendFileBlockRequests(FileSearchResult result) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
+        for (SocketAndStreams peer : fileNode.getConnectedPeers()) {
+            if (peer.getIpString().equals(result.getNodeAddress()) && peer.getNodePort() == result.getNodePort()) {
+                for (int i = 0; i < blockRequests.size(); i++) {
+                    fileNode.sendMessage(peer, (Serializable) blockRequests.get(i));
+                return;
+            }
+        }
+            System.out.println("Peer não encontrado para download: " + result.getNodeAddress() + ":" + result.getNodePort());
+        }
+    }
+
     public void writeFileToDisk(String fileName) {
+        
+        
+        
+        
         new Thread(() -> {
             try {
                 latch.await(); // Espera que todos os blocos sejam descarregados
