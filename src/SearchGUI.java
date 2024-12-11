@@ -60,7 +60,7 @@ public class SearchGUI extends JFrame {
                 int selectedIndex = resultList.getSelectedIndex();
                 FileSearchResult selected = selectedIndex != -1 ? listModel.getElementAt(selectedIndex) : null;
                 if (selected != null) {
-                    
+                    fileNode.startDownload(selected); // Inicia o download do ficheiro selecionado
                     // Aqui pode-se iniciar o download, que seria implementado após a transferência
                     // de ficheiro
                     JOptionPane.showMessageDialog(null, "Descarregar: " + selected.getFileName());

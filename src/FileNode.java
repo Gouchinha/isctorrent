@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import javax.swing.*;
+import java.util.concurrent.*;
 
 public class FileNode {
     private int port;
@@ -10,6 +11,7 @@ public class FileNode {
     private FileLoader fileLoader;
     private SearchGUI gui;
     private SharedResultList sharedResultList;
+    private ExecutorService threadPool;
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -17,6 +19,7 @@ public class FileNode {
         this.connectedPeers = new ArrayList<>();
         this.fileLoader = new FileLoader(pastaDownload);
         this.sharedResultList = null;
+        this.threadPool = Executors.newFixedThreadPool(5);
 
         System.out.println("Nó inicializado na porta: " + port);
 
@@ -130,6 +133,8 @@ public class FileNode {
                     } else {
                         System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
                     }
+                } else if (message instanceof DownloadTasksManager) {
+                    handleReadFileBlockRequest((DownloadTasksManager) message);
                 } else {
                     System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
                 }
@@ -143,6 +148,15 @@ public class FileNode {
                 System.err.println("Erro ao fechar socket: " + ex.getMessage());
             }
         }
+    }
+
+    private void handleReadFileBlockRequest(DownloadTasksManager message) {
+        threadPool.execute(() -> 
+        while(!message.getBlockRequests().isEmpty()) {
+            message.getNextBlockRequest());
+        }
+        System.out.println("Recebido pedido de download de " + message.getFileHash());
+        message.sendFileBlockRequests();
     }
 
     private void handleWordSearchRequest(WordSearchMessage message, SocketAndStreams peer) throws IOException {
@@ -167,7 +181,7 @@ public class FileNode {
     }
 
     public void startDownload(FileSearchResult result) {
-       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), this);
+       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), this, result);
 
         Thread downloadThread = new Thread(() -> downloadTasksManager.sendFileBlockRequests(result));
         downloadThread.setName("DownloadThread");

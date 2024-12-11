@@ -4,6 +4,9 @@ import java.util.concurrent.CountDownLatch;
 import javax.swing.DefaultListModel;
 import javax.swing.AbstractListModel;
 import javax.swing.JList;
+import java.net.InetAddress;
+import java.util.Map;
+import java.util.HashMap;
 
 public class SharedResultList {
 
@@ -22,7 +25,9 @@ public class SharedResultList {
         for (FileSearchResult r : result) {
             for (FileSearchResult existing : results) {
                 if (r.getFileName().equals(existing.getFileName()) || r.getFileHash().equals(existing.getFileHash())) {
-                    existing.incrementFrequency();
+                    existing.addNodeWithFile(new HashMap<String, Integer>() {{
+                        put(r.getNodeAddress(), r.getNodePort());
+                    }});
                     break;
                 } else {
                     results.add(r);

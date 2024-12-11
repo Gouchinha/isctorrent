@@ -1,4 +1,8 @@
 import java.io.Serializable;
+import java.net.InetAddress;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 
 public class FileSearchResult implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -8,7 +12,7 @@ public class FileSearchResult implements Serializable {
     private byte[] fileHash;
     private String nodeAddress;
     private int nodePort;
-    private int numNodes;
+    private List<Map<String, Integer>> nodesWithFile;
 
     public FileSearchResult(WordSearchMessage request, String fileName, long fileSize, byte[] fileHash, String nodeAddress, int nodePort) {
         this.request = request;
@@ -17,19 +21,20 @@ public class FileSearchResult implements Serializable {
         this.fileHash = fileHash;
         this.nodeAddress = nodeAddress;
         this.nodePort = nodePort;
-        this.numNodes = 1;
+        this.nodesWithFile = new ArrayList<Map<String, Integer>>();
     }
 
     public WordSearchMessage getRequest() {
         return request;
     }
 
-    public void incrementFrequency() {
-        numNodes++;
+    public Map<String, Integer> addNodeWithFile(Map<String, Integer> node) {
+        nodesWithFile.add(node);
+        return node;
     }
 
-    public int getNumNodes() {
-        return numNodes;
+    public List<Map<String, Integer>> getNodeswithFile() {
+        return nodesWithFile;
     }
 
     public String getFileName() {

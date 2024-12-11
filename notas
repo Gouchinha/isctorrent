@@ -1,29 +1,12 @@
-ESTRUTURA:
-Threads para descarregamento: N (número de nós disponíveis para o ficheiro) // Dúvida, é uma thread para cada nó??
-Threads na pool para envio de blocos: 5
-Thread para escrita em disco: 1
-Thread para receção de mensagens: 1
-Thread(s) para operações do utilizador (GUI): 1 ou mais // Não se deve fazer nada I guess
-
-TASKS:
-
-enviar Lsita de FileSearchResults não está a dar
-
 dialog - Descarga completa (ver enuncaido)
-
-localhost deve ser 127.0.0.1 quuando testa se já está ligado no connectPeer (FileNode)
-
-não sei se os blocos são escritos indicidualmente ou tenho de os jjuntar
-
-separar as threads todas supsotas e thread pools
-
 
 Threads para descarregamento: 1 ou N (número de nós disponíveis para o ficheiro)
 Threads na pool para envio de blocos: 5
 Thread para escrita em disco: 1
-Thread para receção de mensagens e Tratamento: N
+Thread para receção de mensagens e Tratamento: N (ISTO (esta tabela) PODE NAO ESTAR BEM)
 Thread para conexão de novos pares: 1
 Thread(s) para operações do utilizador: 1 ou mais
 
 
 Lista não parece (e parace retida porque os hashs de conteudos iguais não estão a ficar iguais)
+decidir quem vai iniciar threads para ir buscar FileSearchResults esté imcompleta (FileSearchResults tem de ter SocketsAndStreams?)
