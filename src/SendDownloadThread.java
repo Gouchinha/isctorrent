@@ -9,20 +9,34 @@ import java.nio.file.Path;
 
 public class SendDownloadThread extends Thread {
 
-    private DownloadTasksManager message;
+    private FileBlockRequestMessage message;
     private String directoryPath;
+    private SharedSendDownload sharedSendDownload;
 
-    public SendDownloadThread(DownloadTasksManager message, String directoryPath) {
+    public SendDownloadThread(FileBlockRequestMessage message, String directoryPath, SharedSendDownload sharedSendDownload) {
         System.out.println("SendDownloadThread initiated");
         super();
         this.message = message;
         this.directoryPath = directoryPath;
+        this.sharedSendDownload = sharedSendDownload;
     }
 
     @Override
     public void run() {
-        System.out.println("SendDownloadThread running");
-        // Get all block requests
+         System.out.println("SendDownloadThread running");
+        while(true) {
+            FileBlockRequestMessage request = sharedSendDownload.getNextBlockRequest();
+            if (request == null) {
+                break;
+            }
+            processRequest(request);
+        }
+        
+        
+        
+        
+        
+        /* // Get all block requests
         List<FileBlockRequestMessage> requests = message.getBlockRequests();
 
         if (requests.isEmpty()) {
@@ -72,5 +86,5 @@ public class SendDownloadThread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
+    } */
 }

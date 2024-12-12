@@ -8,11 +8,14 @@ public class DownloadTasksManager implements Serializable {
     private String downloadDirectory; // Destination directory for the file
     private int numBlocks; // Number of blocks to be downloaded
     private int remainingBlocks; // Number of remaining blocks to be received
+    private int randomHash;
 
     public DownloadTasksManager(byte[] fileHash, long fileSize, String downloadDirectory, FileSearchResult searchResults) {
         this.blockRequests = new ArrayList<>();
         this.downloadDirectory = downloadDirectory;
         this.blockAnswers = new ArrayList<>();
+        this.randomHash = new Random().nextInt(1000);
+        this.randomHash = generateUniqueRandomHash();
 
         // Divide the file into blocks
         long blockSize = 10240; // Default block size
@@ -21,15 +24,23 @@ public class DownloadTasksManager implements Serializable {
 
         for (long offset = 0; offset < fileSize; offset += blockSize) {
             int length = (int) Math.min(blockSize, fileSize - offset);
-            blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length));
+            blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length, randomHash));
         }
 
         // Start the thread to write the file to disk
         writeFileToDisk();
     }
 
+    private int generateUniqueRandomHash() {
+        return new Random().nextInt(1000);
+    }
+
     public synchronized List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
+    }
+
+    public synchronized int getDownloadRequestHash() {
+        return this.randomHash;
     }
 
     public synchronized List<FileBlockAnswerMessage> getBlockAnswers() {
@@ -40,7 +51,7 @@ public class DownloadTasksManager implements Serializable {
         return downloadDirectory;
     }
 
-    public synchronized FileBlockRequestMessage getNextBlockRequest() {
+    public synchronized FileBlockRequestMessage getNextBlockRequest() throws InterruptedException {
         if (!blockRequests.isEmpty()) {
             return blockRequests.remove(0);
         }

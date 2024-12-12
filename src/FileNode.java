@@ -12,6 +12,7 @@ public class FileNode implements Serializable {
     private SearchGUI gui;
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
+    private List<SharedSendDownload> sharedSendDownloads;
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -20,6 +21,7 @@ public class FileNode implements Serializable {
         this.fileLoader = new FileLoader(pastaDownload);
         this.sharedResultList = null;
         this.threadPool = Executors.newFixedThreadPool(5);
+        this.sharedSendDownloads = new ArrayList<>();
 
         System.out.println("Nó inicializado na porta: " + port);
 
@@ -133,8 +135,8 @@ public class FileNode implements Serializable {
                     } else {
                         System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
                     }
-                } else if (message instanceof DownloadTasksManager) {
-                    handleReadFileBlockRequest((DownloadTasksManager) message);
+                } else if (message instanceof FileBlockRequestMessage) {
+                    handleFileBlockRequest((FileBlockRequestMessage) message);
                     System.out.println("DownloadTasksManager recebido");
                 } else {
                     System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
@@ -151,7 +153,33 @@ public class FileNode implements Serializable {
         }
     }
 
-    private void handleReadFileBlockRequest(DownloadTasksManager message) {
+    private void handleFileBlockRequest(FileBlockRequestMessage message) {
+        String threadName = "SendDownloadThread-" + message.getDownloadIdentifier();
+        boolean threadExists = false;
+
+        for (Thread t : Thread.getAllStackTraces().keySet()) {
+            if (t.getName().equals(threadName)) {
+                threadExists = true;
+                break;
+            }
+        }
+
+        if (!threadExists) {
+            SharedSendDownload shared = null;
+            for (SharedSendDownload sharedSendDownload : sharedSendDownloads) {
+                if (sharedSendDownload.getIdentifier() == message.getDownloadIdentifier()) {
+                    shared = sharedSendDownload;
+                    return;
+                }
+            }
+            if (shared == null) {
+                shared = new SharedSendDownload(message.getDownloadIdentifier());
+                sharedSendDownloads.add(shared);
+            }
+            Thread sendDownloadThread = new Thread(new SendDownloadThread(message, fileLoader.getDirectoryPath(), shared));
+            sendDownloadThread.setName(threadName);
+            sendDownloadThread.start();
+        }
         threadPool.submit(new SendDownloadThread(message, fileLoader.getDirectoryPath()));
     }
 
@@ -192,7 +220,16 @@ public class FileNode implements Serializable {
             }
          } */
          for (SocketAndStreams peer : connectedPeers) {
-            sendMessage(peer, downloadTasksManager);
+            new Thread() {
+                public void run() {
+                    try {
+                        sendMessage(peer, downloadTasksManager.getNextBlockRequest());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }.start();
+            
         }
     }
 
