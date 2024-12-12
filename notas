@@ -1,4 +1,4 @@
-dialog - Descarga completa (ver enuncaido)
+dialog - Descarga completa (ver enunciado)
 
 Threads para descarregamento: 1 ou N (número de nós disponíveis para o ficheiro)
 Threads na pool para envio de blocos: 5
@@ -8,5 +8,5 @@ Thread para conexão de novos pares: 1
 Thread(s) para operações do utilizador: 1 ou mais
 
 
-Lista não parece (e aparace retida porque os hashs de conteudos iguais não estão a ficar iguais)
-ID do downlaodtaskmanager deve ser uam ahsh mm random
+Lista não parece (e aparece retida porque os hashs de conteudos iguais não estão a ficar iguais)
+ID do downloadTaskManager deve ser uam hash mm random
