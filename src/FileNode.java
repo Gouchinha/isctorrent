@@ -13,6 +13,7 @@ public class FileNode implements Serializable {
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
     private List<SharedSendDownload> sharedSendDownloads;
+    private DownloadTasksManager downloadTasksManager;
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -22,6 +23,7 @@ public class FileNode implements Serializable {
         this.sharedResultList = null;
         this.threadPool = Executors.newFixedThreadPool(5);
         this.sharedSendDownloads = new ArrayList<>();
+        this.downloadTasksManager = null;
 
         System.out.println("Nó inicializado na porta: " + port);
 
@@ -137,7 +139,7 @@ public class FileNode implements Serializable {
                     }
                 } else if (message instanceof FileBlockRequestMessage) {
                     handleFileBlockRequest((FileBlockRequestMessage) message);
-                    System.out.println("DownloadTasksManager recebido");
+                    System.out.println("FileBlockRequestMessage recebido");
                 } else {
                     System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
                 }
@@ -165,22 +167,19 @@ public class FileNode implements Serializable {
         }
 
         if (!threadExists) {
-            SharedSendDownload shared = null;
+            SharedSendDownload shared = new SharedSendDownload(message.getDownloadIdentifier());
+            sharedSendDownloads.add(shared);
+            Thread sendDownloadThread = new Thread(new SendDownloadThread(message, fileLoader.getDirectoryPath(), shared));
+            sendDownloadThread.setName(threadName);
+            threadPool.submit(sendDownloadThread);
+        } else {
             for (SharedSendDownload sharedSendDownload : sharedSendDownloads) {
                 if (sharedSendDownload.getIdentifier() == message.getDownloadIdentifier()) {
-                    shared = sharedSendDownload;
+                    sharedSendDownload.addBlockRequest(message);
                     return;
                 }
             }
-            if (shared == null) {
-                shared = new SharedSendDownload(message.getDownloadIdentifier());
-                sharedSendDownloads.add(shared);
-            }
-            Thread sendDownloadThread = new Thread(new SendDownloadThread(message, fileLoader.getDirectoryPath(), shared));
-            sendDownloadThread.setName(threadName);
-            sendDownloadThread.start();
         }
-        threadPool.submit(new SendDownloadThread(message, fileLoader.getDirectoryPath()));
     }
 
     private void handleWordSearchRequest(WordSearchMessage message, SocketAndStreams peer) throws IOException {
@@ -205,14 +204,9 @@ public class FileNode implements Serializable {
     }
 
     public void startDownload(FileSearchResult result) {
-       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
+       downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
 
-       sendFileBlockRequests(result, downloadTasksManager);
-        
-    }
-
-    public void sendFileBlockRequests(FileSearchResult result, DownloadTasksManager downloadTasksManager) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
-        /* for (SocketAndStreams peer : getConnectedPeers()) {
+       /* for (SocketAndStreams peer : getConnectedPeers()) {
             for (String[] r : result.getNodeswithFile().getList()) {
                 if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
                     sendMessage(peer, downloadTasksManager);
@@ -223,7 +217,9 @@ public class FileNode implements Serializable {
             new Thread() {
                 public void run() {
                     try {
-                        sendMessage(peer, downloadTasksManager.getNextBlockRequest());
+                        FileBlockRequestMessage message = downloadTasksManager.getNextBlockRequest();
+                        sendMessage(peer, message);
+                        System.out.println("Block request" + message + "enviado para " + peer.getIpString() + ":" + peer.getNodePort());
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -231,6 +227,7 @@ public class FileNode implements Serializable {
             }.start();
             
         }
+        
     }
 
     public void sendWordSearchRequest(String searchWord) {

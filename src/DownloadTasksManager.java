@@ -24,7 +24,8 @@ public class DownloadTasksManager implements Serializable {
 
         for (long offset = 0; offset < fileSize; offset += blockSize) {
             int length = (int) Math.min(blockSize, fileSize - offset);
-            blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length, randomHash));
+            boolean isLastBlock = offset + length >= fileSize;
+            blockRequests.add(new FileBlockRequestMessage(fileHash, offset, length, randomHash, isLastBlock));
         }
 
         // Start the thread to write the file to disk
@@ -52,7 +53,7 @@ public class DownloadTasksManager implements Serializable {
     }
 
     public synchronized FileBlockRequestMessage getNextBlockRequest() throws InterruptedException {
-        if (!blockRequests.isEmpty()) {
+        if (!getBlockRequests().isEmpty()) {
             return blockRequests.remove(0);
         }
         return null;

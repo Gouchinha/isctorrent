@@ -50,7 +50,7 @@ public class IscTorrent {
         // Iniciar o servidor numa nova thread
         SwingUtilities.invokeLater(() -> {
             try {
-                new FileNode(porta, pastaDownload);
+                FileNode node = new FileNode(porta, pastaDownload);
                 System.out.println("Servidor iniciado com sucesso!");
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(null, "Erro ao iniciar o servidor: " + e.getMessage());

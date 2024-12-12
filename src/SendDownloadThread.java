@@ -23,68 +23,44 @@ public class SendDownloadThread extends Thread {
 
     @Override
     public void run() {
-         System.out.println("SendDownloadThread running");
-        while(true) {
+        System.out.println("SendDownloadThread running");
+        while (true) {
             FileBlockRequestMessage request = sharedSendDownload.getNextBlockRequest();
-            if (request == null) {
-                break;
-            }
+            System.out.println("Request received: " + request.getOffset());
+            
             processRequest(request);
+
+            if (request.isLastBlock() == true) {
+                this.interrupt();
+            }
         }
-        
-        
-        
-        
-        
-        /* // Get all block requests
-        List<FileBlockRequestMessage> requests = message.getBlockRequests();
+    }
 
-        if (requests.isEmpty()) {
-            System.err.println("No requests to process.");
-            return; // No requests to process
-        }
-        System.out.println("Requests to process: " + requests.size());
-        // Get the file hash from the first request
-        byte[] fileHash = requests.get(0).getFileHash();
-        // Get the file to send
-        //String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
-        File file = message.getFileByHashInDirectory(fileHash, directoryPath);
-
-        if (file == null || !file.exists()) {
-            System.err.println("File not found.");
-            return;
-        }
-
-        System.out.println("File found: " + file.getName());
-
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            List<FileBlockAnswerMessage> answers = new ArrayList<>();
-
-            for (FileBlockRequestMessage request : requests) {
-            long offset = request.getOffset();
-            int length = request.getLength();
-
-            // Read the requested block
-            byte[] blockData = new byte[length];
+    public void processRequest(FileBlockRequestMessage request) {
+        byte[] fileHash = request.getFileHash();
+        long offset = request.getOffset();
+        int length = request.getLength();
+        File file = new File(directoryPath);
+        byte[] data = new byte[length];
+        try {
+            RandomAccessFile raf = new RandomAccessFile(file, "r");
             raf.seek(offset);
-            int bytesRead = raf.read(blockData, 0, length);
+            raf.read(data, 0, length);
+            raf.close();
+            
+            // Create and send FileBlockAnswerMessage
+            FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(fileHash, offset, data);
+            System.out.println("Block answer created: " + answerMessage.getBlockOffset());
+            
+            //sharedSendDownload.sendBlockAnswer(answerMessage);
 
-            if (bytesRead == length) {
-                // Create a FileBlockAnswerMessage with the block data
-                FileBlockAnswerMessage answer = new FileBlockAnswerMessage(fileHash, offset, blockData);
-                answers.add(answer);
-            }
-            }
-
-            System.out.println("Answers to send: " + answers.size());
-
-            // Send the answers
-            for (FileBlockAnswerMessage answer : answers) {
-                System.out.println("Sending answer: " + answer.getBlockOffset());
-                message.addBlockAnswer(answer);
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-    } */
-}
+    }
+
+    public void sendBlockAnswer(FileBlockAnswerMessage answerMessage) {
+
+        System.out.println("Block answer sent: " + answerMessage.getBlockOffset());
+    }   
+}   
