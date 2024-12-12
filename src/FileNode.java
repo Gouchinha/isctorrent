@@ -135,6 +135,7 @@ public class FileNode implements Serializable {
                     }
                 } else if (message instanceof DownloadTasksManager) {
                     handleReadFileBlockRequest((DownloadTasksManager) message);
+                    System.out.println("DownloadTasksManager recebido");
                 } else {
                     System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
                 }
@@ -151,7 +152,7 @@ public class FileNode implements Serializable {
     }
 
     private void handleReadFileBlockRequest(DownloadTasksManager message) {
-        threadPool.submit(new SendDownloadThread(message));
+        threadPool.submit(new SendDownloadThread(message, fileLoader.getDirectoryPath()));
     }
 
     private void handleWordSearchRequest(WordSearchMessage message, SocketAndStreams peer) throws IOException {
@@ -183,13 +184,16 @@ public class FileNode implements Serializable {
     }
 
     public void sendFileBlockRequests(FileSearchResult result, DownloadTasksManager downloadTasksManager) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
-        for (SocketAndStreams peer : getConnectedPeers()) {
+        /* for (SocketAndStreams peer : getConnectedPeers()) {
             for (String[] r : result.getNodeswithFile().getList()) {
                 if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
                     sendMessage(peer, downloadTasksManager);
                 }
             }
-         }
+         } */
+         for (SocketAndStreams peer : connectedPeers) {
+            sendMessage(peer, downloadTasksManager);
+        }
     }
 
     public void sendWordSearchRequest(String searchWord) {
@@ -216,7 +220,7 @@ public class FileNode implements Serializable {
         try {
             peer.getObjectOutputStream().writeObject(message);
             peer.getObjectOutputStream().flush();
-            System.out.println("Mensagem enviada para " + peer.getIpString() + ": " + message);
+            System.out.println("Mensagem enviada para " + peer.getIpString() + ":" + peer.getNodePort() + ": " + message);
         } catch (IOException e) {
             System.err.println("Erro ao enviar mensagem para " + peer.getIpString() + ":" + peer.getNodePort() + ": " + e.getMessage());
             e.printStackTrace();

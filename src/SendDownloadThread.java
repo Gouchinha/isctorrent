@@ -4,36 +4,44 @@ import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Path;
 
 
 public class SendDownloadThread extends Thread {
 
     private DownloadTasksManager message;
+    private String directoryPath;
 
-    public SendDownloadThread(DownloadTasksManager message) {
+    public SendDownloadThread(DownloadTasksManager message, String directoryPath) {
+        System.out.println("SendDownloadThread initiated");
         super();
         this.message = message;
+        this.directoryPath = directoryPath;
     }
 
     @Override
     public void run() {
+        System.out.println("SendDownloadThread running");
         // Get all block requests
         List<FileBlockRequestMessage> requests = message.getBlockRequests();
 
         if (requests.isEmpty()) {
+            System.err.println("No requests to process.");
             return; // No requests to process
         }
-
+        System.out.println("Requests to process: " + requests.size());
         // Get the file hash from the first request
         byte[] fileHash = requests.get(0).getFileHash();
         // Get the file to send
         //String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
-        File file = message.getFileByHashInDirectory(fileHash, message.getDownloadDirectory());
+        File file = message.getFileByHashInDirectory(fileHash, directoryPath);
 
         if (file == null || !file.exists()) {
             System.err.println("File not found.");
             return;
         }
+
+        System.out.println("File found: " + file.getName());
 
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             List<FileBlockAnswerMessage> answers = new ArrayList<>();
@@ -54,8 +62,11 @@ public class SendDownloadThread extends Thread {
             }
             }
 
+            System.out.println("Answers to send: " + answers.size());
+
             // Send the answers
             for (FileBlockAnswerMessage answer : answers) {
+                System.out.println("Sending answer: " + answer.getBlockOffset());
                 message.addBlockAnswer(answer);
             }
         } catch (IOException e) {
