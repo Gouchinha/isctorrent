@@ -8,5 +8,5 @@ Thread para conexão de novos pares: 1
 Thread(s) para operações do utilizador: 1 ou mais
 
 
-Lista não parece (e parace retida porque os hashs de conteudos iguais não estão a ficar iguais)
+Lista não parece (e aparace retida porque os hashs de conteudos iguais não estão a ficar iguais)
 ID do downlaodtaskmanager deve ser uam ahsh mm random

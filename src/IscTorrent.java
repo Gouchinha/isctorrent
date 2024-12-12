@@ -5,18 +5,10 @@ import java.io.IOException;
 public class IscTorrent {
     public static void main(String[] args) {
 
-        if (args.length == 0) {
-            String input = JOptionPane.showInputDialog(null, "Por favor, insira os argumentos separados por espaço:");
-            if (input != null) {
-                args = input.split(" ");
-            } else {
-                System.out.println("Nenhum argumento fornecido.");
-                System.exit(1);
-            }
-        }
+        args = getArgsFromInput(args);
 
         if (args.length != 2) {
-            JOptionPane.showMessageDialog(null, "Argumentos Insuficientes. Uso: <porta> <diretoriaDownload>");
+            showInsufficientArgsMessage();
             System.exit(1);
         }
 
@@ -25,10 +17,7 @@ public class IscTorrent {
             int porta = Integer.parseInt(args[0]);
             String pastaDownload = args[1];
 
-            // Validar os argumentos
-            if (porta < 1 || porta > 65535) {
-                throw new IllegalArgumentException("A porta deve estar entre 1 e 65535.");
-            }
+            validateArgs(porta, pastaDownload);
 
             // Lógica principal da aplicação
             System.out.println("Iniciando IscTorrent na porta " + porta);
@@ -38,12 +27,43 @@ public class IscTorrent {
             startServer(porta, pastaDownload);
 
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(null, "Erro: A porta deve ser um número inteiro.");
+            showNumberFormatErrorMessage();
             System.exit(1);
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(null, "Erro: " + e.getMessage());
+            showIllegalArgumentErrorMessage(e);
             System.exit(1);
         }
+    }
+
+    private static String[] getArgsFromInput(String[] args) {
+        if (args.length == 0) {
+            String input = JOptionPane.showInputDialog(null, "Por favor, insira os argumentos separados por espaço:");
+            if (input != null) {
+                return input.split(" ");
+            } else {
+                System.out.println("Nenhum argumento fornecido.");
+                System.exit(1);
+            }
+        }
+        return args;
+    }
+
+    private static void showInsufficientArgsMessage() {
+        JOptionPane.showMessageDialog(null, "Argumentos Insuficientes. Uso: <porta> <diretoriaDownload>");
+    }
+
+    private static void validateArgs(int porta, String pastaDownload) {
+        if (porta < 1 || porta > 65535) {
+            throw new IllegalArgumentException("A porta deve estar entre 1 e 65535.");
+        }
+    }
+
+    private static void showNumberFormatErrorMessage() {
+        JOptionPane.showMessageDialog(null, "Erro: A porta deve ser um número inteiro.");
+    }
+
+    private static void showIllegalArgumentErrorMessage(IllegalArgumentException e) {
+        JOptionPane.showMessageDialog(null, "Erro: " + e.getMessage());
     }
 
     private static void startServer(int porta, String pastaDownload) {
