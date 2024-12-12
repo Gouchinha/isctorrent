@@ -1,22 +1,16 @@
 import java.io.*;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class DownloadTasksManager {
+public class DownloadTasksManager implements Serializable {
     private List<FileBlockRequestMessage> blockRequests;
     private List<FileBlockAnswerMessage> blockAnswers;
-    private CountDownLatch latch; // Sincroniza o número de blocos restantes
+    private transient CountDownLatch latch; // Sincroniza o número de blocos restantes
     private String downloadDirectory; // Diretório de destino do ficheiro
-    private FileNode fileNode;
-    private FileSearchResult searchResults;
 
-    public DownloadTasksManager(byte[] fileHash, long fileSize, String downloadDirectory, FileNode fileNode, FileSearchResult searchResults) {
+    public DownloadTasksManager(byte[] fileHash, long fileSize, String downloadDirectory, FileSearchResult searchResults) {
         this.blockRequests = new ArrayList<>();
         this.downloadDirectory = downloadDirectory;
-        this.fileNode = fileNode;
-        this.searchResults = searchResults;
 
         // Divide o ficheiro em blocos
         long blockSize = 10240; // Tamanho padrão do bloco
@@ -65,16 +59,6 @@ public class DownloadTasksManager {
     public synchronized void addBlockAnswer(FileBlockAnswerMessage message) {
         blockAnswers.add(message);
         latch.countDown(); // Indica que um bloco foi descarregado
-    }
-
-    public void sendFileBlockRequests(FileSearchResult result) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
-        for (SocketAndStreams peer : fileNode.getConnectedPeers()) {
-            for (String[] r : result.getNodeswithFile()) {
-                if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
-                    fileNode.sendMessage(peer, (Serializable) this);
-                }
-            }
-         }
     }
 
     public void writeFileToDisk() {

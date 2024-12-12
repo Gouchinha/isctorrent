@@ -1,30 +1,30 @@
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import javax.swing.DefaultListModel;
-import javax.swing.AbstractListModel;
-import javax.swing.JList;
-import java.net.InetAddress;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.io.Serializable;
 
-public class SharedResultList {
+public class SharedResultList implements Serializable {
 
-    private List<FileSearchResult> results;
-    private CountDownLatch latch;
+    private CopyOnWriteArrayList<FileSearchResult> results;
+    private transient CountDownLatch latch;
     private SearchGUI gui;
 
-    public SharedResultList(int numberOfPeers, SearchGUI gui) {
-        this.results = new ArrayList<>();
-        this.latch = new CountDownLatch(numberOfPeers);
+    public SharedResultList(int numberOfPeersWithFile, SearchGUI gui) {
+        this.results = new CopyOnWriteArrayList<>();
+        this.latch = new CountDownLatch(numberOfPeersWithFile);
         this.gui = gui;
     }
 
     public synchronized void add(List<FileSearchResult> result) {
         System.out.println("Adding results to shared list");
+        
         for (FileSearchResult r : result) {
-            for (FileSearchResult existing : results) {
-                if (r.getFileName().equals(existing.getFileName()) || r.getFileHash().equals(existing.getFileHash())) {
+            if (results.isEmpty()) {
+                results.addAll(result);
+                break;
+            }
+            for (FileSearchResult existing : results) { // AQUI EM BAIXO VAI SER "&&" MAS PRECISAMOS CORRIGIR HASH
+                if (r.getFileName() == existing.getFileName() || r.getFileHash().equals(existing.getFileHash())) {
                     existing.addNodeWithFile(new String[] {r.getNodeAddress(), String.valueOf(r.getNodePort())});
                     break;
                 } else {
@@ -33,7 +33,6 @@ public class SharedResultList {
             }
         }           
         latch.countDown(); // Decrement the latch count
-        notifyAll(); // Notify any waiting threads
     }
 
     public void clear() {

@@ -4,7 +4,7 @@ import java.util.*;
 import javax.swing.*;
 import java.util.concurrent.*;
 
-public class FileNode {
+public class FileNode implements Serializable {
     private int port;
     private ServerSocket serverSocket;
     private List<SocketAndStreams> connectedPeers;
@@ -176,12 +176,20 @@ public class FileNode {
     }
 
     public void startDownload(FileSearchResult result) {
-       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), this, result);
+       DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
 
-        Thread downloadThread = new Thread(() -> downloadTasksManager.sendFileBlockRequests(result));
-        downloadThread.setName("DownloadThread");
-        downloadThread.start();
+       sendFileBlockRequests(result, downloadTasksManager);
         
+    }
+
+    public void sendFileBlockRequests(FileSearchResult result, DownloadTasksManager downloadTasksManager) { // ISTO MANDA PARA TODOS OS NÓS TODOS OS BLOCOS (NÃO É ISTO)
+        for (SocketAndStreams peer : getConnectedPeers()) {
+            for (String[] r : result.getNodeswithFile().getList()) {
+                if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
+                    sendMessage(peer, downloadTasksManager);
+                }
+            }
+         }
     }
 
     public void sendWordSearchRequest(String searchWord) {
@@ -210,7 +218,8 @@ public class FileNode {
             peer.getObjectOutputStream().flush();
             System.out.println("Mensagem enviada para " + peer.getIpString() + ": " + message);
         } catch (IOException e) {
-            System.err.println("Erro ao enviar mensagem para " + peer.getIpString() + ": " + e.getMessage());
+            System.err.println("Erro ao enviar mensagem para " + peer.getIpString() + ":" + peer.getNodePort() + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

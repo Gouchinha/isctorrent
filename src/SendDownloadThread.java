@@ -1,5 +1,5 @@
 import java.util.List;
-import java.nio.file.Path;
+//import java.nio.file.Path;
 import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +27,7 @@ public class SendDownloadThread extends Thread {
         // Get the file hash from the first request
         byte[] fileHash = requests.get(0).getFileHash();
         // Get the file to send
-        String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
+        //String directoryPath = Path.of("").toAbsolutePath().resolve(message.getDownloadDirectory()).toString();
         File file = message.getFileByHashInDirectory(fileHash, message.getDownloadDirectory());
 
         if (file == null || !file.exists()) {

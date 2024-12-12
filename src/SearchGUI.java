@@ -2,9 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class SearchGUI extends JFrame {
     private JTextField searchField, addressField, portField;
@@ -14,7 +12,7 @@ public class SearchGUI extends JFrame {
     private FileNode fileNode; // Referência para o nó
 
     public SearchGUI(FileNode fileNodeObject) {
-        setTitle("Pesquisa");
+        setTitle("Pesquisa" + fileNodeObject.getPort());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(500, 350);
         setLocationRelativeTo(null);
@@ -141,16 +139,6 @@ public class SearchGUI extends JFrame {
     if (results.isEmpty()) {
         // JOptionPane.showMessageDialog(this, "Nenhum resultado encontrado!");
     } else {
-        /* // Map para filtrar elementos únicos por hash e nome
-        Map<String, FileSearchResult> filteredResults = new HashMap<>();
-        for (FileSearchResult result : results) {
-            String key = result.getFileHash() + ":" + result.getFileName(); // Combinação de hash e nome como chave
-            if (!filteredResults.containsKey(key)) {
-                filteredResults.put(key, result); // Adiciona ao mapa apenas se ainda não existir
-            }
-        } */
-
-        // Adiciona os resultados filtrados ao listModel
         for (FileSearchResult result : results) {
             listModel.addElement(result);
         }
@@ -165,7 +153,7 @@ public class SearchGUI extends JFrame {
 
         @Override
         public String getElementAt(int index) {
-            return listModel.getElementAt(index).getFileName();
+            return listModel.getElementAt(index).getFileName() + " (" + listModel.getElementAt(index).getNodeswithFile().toString();
         }
     });
     }

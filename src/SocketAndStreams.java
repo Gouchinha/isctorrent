@@ -1,9 +1,10 @@
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.io.Serializable;
 
 // Classe para armazenar informações sobre os peers conectados
-public class SocketAndStreams {
+public class SocketAndStreams implements Serializable {
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
