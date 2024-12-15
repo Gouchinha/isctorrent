@@ -40,16 +40,16 @@ public class SharedResultList implements Serializable {
 
     private void processExistingResult(FileSearchResult r) {
         for (FileSearchResult existing : finalResults) {
-            System.out.println("Result: " + r.getFileHash() + " - " + r.getFileName() + " - " + existing.getNodePort());
+            System.out.println("Result: " + r.getFileHash() + " - " + r.getFileName() + " - " + r.getNodePort());
             System.out.println("Comparing to" + existing.getFileHash() + " - " + existing.getFileName() + " - " + existing.getNodePort());
             if (r.getFileHash().equals(existing.getFileHash()) || r.getFileName().equals(existing.getFileName())) {
                 System.out.println("Duplicate result found: " + existing.getFileName());
                 existing.addNodeWithFile(new String[] { r.getNodeAddress(), String.valueOf(r.getNodePort()) });
-            } else {
-                finalResults.add(r);
-                System.out.println("Result added: " + r.getFileName());
+                return;
             }
         }
+        finalResults.add(r);
+        System.out.println("Result added: " + r.getFileName());
     }
 
     public synchronized void waitAndGetResults() throws InterruptedException {
