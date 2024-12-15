@@ -5,12 +5,12 @@ public class FileSearchResult implements Serializable {
     private WordSearchMessage request;
     private String fileName;
     private long fileSize;
-    private byte[] fileHash;
+    private int fileHash;
     private String nodeAddress;
     private int nodePort;
     private ListStringVector nodesWithFile;
 
-    public FileSearchResult(WordSearchMessage request, String fileName, long fileSize, byte[] fileHash, String nodeAddress, int nodePort) {
+    public FileSearchResult(WordSearchMessage request, String fileName, long fileSize, int fileHash, String nodeAddress, int nodePort) {
         this.request = request;
         this.fileName = fileName;
         this.fileSize = fileSize;
@@ -43,7 +43,7 @@ public class FileSearchResult implements Serializable {
         return fileSize;
     }
 
-    public byte[] getFileHash() {
+    public int getFileHash() {
         return fileHash;
     }
 

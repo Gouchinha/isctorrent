@@ -7,6 +7,10 @@
         "SharedResultList.java": {
           "type": "java",
           "annotation": "hash como aidna está mal para testes está || mas deve ser &&"
+        },
+        "FileNode.java": {
+          "type": "java",
+          "annotation": "threads de send Downlaod é que esperam por FileBlockRequests, nãoi a thread principal"
         }
       }
     }

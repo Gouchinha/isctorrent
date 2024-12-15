@@ -1,41 +1,35 @@
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class SharedSendDownload {
 
-    private List<FileBlockRequestMessage> blockRequests;
-    private int identifier;
+    private final long identifier;
+    private final BlockingQueue<FileBlockRequestMessage> queue = new LinkedBlockingQueue<>();
+    private volatile boolean active = true; // Flag para controlar o estado ativo
 
-    public SharedSendDownload(int identifier) {
-        this.blockRequests = new ArrayList<>();
+    public SharedSendDownload(long identifier) {
         this.identifier = identifier;
     }
 
-    public synchronized List<FileBlockRequestMessage> getBlockRequests() {
-        return blockRequests;
-    }
-
-    public synchronized int getIdentifier() {
+    public long getIdentifier() {
         return identifier;
     }
 
-    public synchronized FileBlockRequestMessage getNextBlockRequest() {
-        System.out.println("Getting next block request");   
-        while (getBlockRequests().isEmpty()) {
-            try {
-            wait();
-            } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // Restore interrupted status
-            }
-        }
-        FileBlockRequestMessage request = blockRequests.remove(0);
-        
-        return request;
+    public void addBlockRequest(FileBlockRequestMessage request) {
+        System.out.println("Added block request to queue");
+        queue.add(request);
     }
 
-    public synchronized void addBlockRequest(FileBlockRequestMessage request) {
-        System.out.println("Adding block request: " + request.getOffset());
-        blockRequests.add(request);
-        notifyAll();   
+    public FileBlockRequestMessage takeBlockRequest() {
+        System.out.println("Took block request from queue");
+        return queue.poll();
     }
+
+    
+    
 }

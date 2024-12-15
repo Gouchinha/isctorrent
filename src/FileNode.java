@@ -12,7 +12,9 @@ public class FileNode implements Serializable {
     private SearchGUI gui;
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
-    private List<SharedSendDownload> sharedSendDownloads;
+    private SharedSendDownload sharedDownload;
+    private DownloadTasksManager downloadTasksManager;
+    private List<SharedSendDownload> sharedSendDownloads = new ArrayList<>();
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -21,8 +23,6 @@ public class FileNode implements Serializable {
         this.fileLoader = new FileLoader(pastaDownload);
         this.sharedResultList = null;
         this.threadPool = Executors.newFixedThreadPool(5);
-        this.sharedSendDownloads = new ArrayList<>();
-
         System.out.println("Nó inicializado na porta: " + port);
 
         SwingUtilities.invokeLater(() -> {
@@ -163,8 +163,10 @@ public class FileNode implements Serializable {
         } else if (message instanceof List<?>) {
             handleListMessage((List<?>) message);
         } else if (message instanceof FileBlockRequestMessage) {
-            handleFileBlockRequest((FileBlockRequestMessage) message);
+            handleFileBlockRequest((FileBlockRequestMessage) message , peer);
             System.out.println("FileBlockRequestMessage recebido");
+        } else if (message instanceof FileBlockAnswerMessage) {
+            downloadTasksManager.addBlockAnswer((FileBlockAnswerMessage) message);
         } else {
             System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
         }
@@ -189,31 +191,99 @@ public class FileNode implements Serializable {
         }
     }
 
-    private void handleFileBlockRequest(FileBlockRequestMessage message) {
-        String threadName = "SendDownloadThread-" + message.getDownloadIdentifier();
-        boolean threadExists = false;
+    private void handleFileBlockRequest(FileBlockRequestMessage request, SocketAndStreams peer) {
+        String threadName = "SendDownloadThread-" + request.getDownloadIdentifier();
+        SharedSendDownload existingSharedSendDownload = null;
 
-        for (Thread t : Thread.getAllStackTraces().keySet()) {
-            if (t.getName().equals(threadName)) {
-                threadExists = true;
+        // Verificar se já existe um SharedSendDownload associado ao identificador
+        for (SharedSendDownload sharedSendDownload : sharedSendDownloads) {
+            if (sharedSendDownload.getIdentifier() == request.getDownloadIdentifier()) {
+                System.out.println("SharedSendDownload já existe para " + request.getDownloadIdentifier());
+                existingSharedSendDownload = sharedSendDownload;
                 break;
             }
         }
 
-        if (!threadExists) {
-            SharedSendDownload shared = new SharedSendDownload(message.getDownloadIdentifier());
-            sharedSendDownloads.add(shared);
-            Thread sendDownloadThread = new Thread(new SendDownloadThread(message, fileLoader.getDirectoryPath(), shared));
-            sendDownloadThread.setName(threadName);
-            threadPool.submit(sendDownloadThread);
-        } else {
-            for (SharedSendDownload sharedSendDownload : sharedSendDownloads) {
-                if (sharedSendDownload.getIdentifier() == message.getDownloadIdentifier()) {
-                    sharedSendDownload.addBlockRequest(message);
-                    return;
+        if (existingSharedSendDownload != null) {
+            // Adicionar o novo pedido à queue da thread já existente
+            System.out.println("Adicionando pedido à queue existente");
+            existingSharedSendDownload.addBlockRequest(request);
+            return;
+        }
+
+        // Caso contrário, criar um novo SharedSendDownload
+        SharedSendDownload newSharedSendDownload = new SharedSendDownload(request.getDownloadIdentifier());
+        sharedSendDownloads.add(newSharedSendDownload);
+
+        // Criar uma nova thread para processar os pedidos dessa queue
+        Thread sendDownloadThread = new Thread(() -> {
+            try {
+                while (true) {
+                    FileBlockRequestMessage blockRequest = newSharedSendDownload.takeBlockRequest();
+                    if (blockRequest == null) { // Sinal de término
+                        break;
+                    }
+                    // Processar o pedido
+                    processRequest(blockRequest, fileLoader.getDirectoryPath(), peer);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Tratar interrupções
+            } finally {
+                // Remover o SharedSendDownload da lista ao terminar
+                synchronized (sharedSendDownloads) {
+                    sharedSendDownloads.remove(newSharedSendDownload);
                 }
             }
+        });
+
+        sendDownloadThread.setName(threadName);
+        threadPool.submit(sendDownloadThread);
+        newSharedSendDownload.addBlockRequest(request); // Adicionar o primeiro bloco à queue
+    }
+
+    public void processRequest(FileBlockRequestMessage request, String directory, SocketAndStreams peer) throws InterruptedException {
+        System.out.println("Criando resposta a pedido: " + request.getOffset());
+        int fileHash = request.getFileHash();
+        long offset = request.getOffset();
+        int length = request.getLength();
+        File file = getFileByHashInDirectory(fileHash, directory);
+        byte[] data = new byte[length];
+        try {
+            RandomAccessFile raf = new RandomAccessFile(file, "r");
+            raf.seek(offset);
+            raf.read(data, 0, length);
+            raf.close();
+
+            // Create and send FileBlockAnswerMessage
+            FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(fileHash, offset, data);
+            System.out.println("Block answer created: " + answerMessage.getBlockOffset());
+
+            sendBlockAnswer(answerMessage, peer);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
+    
+    public File getFileByHashInDirectory(int fileHash, String directoryPath) throws InterruptedException {
+        File directory = new File(directoryPath);
+        File[] files = directory.listFiles();
+        for (File file : files) {
+            try {
+                File_Hash file_Hash = new File_Hash(file);
+                if (file_Hash.getHash() != 0 && file_Hash.getHash() == fileHash) {
+                    return file;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public void sendBlockAnswer(FileBlockAnswerMessage answerMessage, SocketAndStreams peer) {
+        sendMessage(peer, answerMessage);
+        System.out.println("Block answer sent: " + answerMessage.getBlockOffset());
     }
 
     private void handleWordSearchRequest(WordSearchMessage message, SocketAndStreams peer) throws IOException {
@@ -238,39 +308,40 @@ public class FileNode implements Serializable {
     }
 
     public void startDownload(FileSearchResult result) {
-        DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
-
-        /*  for (SocketAndStreams peer : getConnectedPeers()) {
-            for (String[] r : result.getNodeswithFile().getList()) {
-                if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
-                    sendMessage(peer, downloadTasksManager);
-                }
-            }
-         }  
-            */
+        downloadTasksManager = new DownloadTasksManager(result.getFileHash(),
+            result.getFileSize(),
+            fileLoader.getDirectoryPath(), 
+            result);
 
         for (SocketAndStreams peer : connectedPeers) {
             System.out.println("Peer ID " + peer.getIpString() + ":" + peer.getNodePort());
             for (String[] r : result.getNodesWithFile().getList()) {
                 System.out.println("Result ID " + r[0] + ":" + r[1]);
-                /* if (peer.getIpString().equals(r[0]) && peer.getNodePort() == Integer.parseInt(r[1])) {
-                    sendMessage(peer, downloadTasksManager);
-                    System.out.println("DownloadTasksManager enviado para " + peer.getIpString() + ":" + peer.getNodePort());
-                } */
-            }
-            /* new Thread() {
-                public void run() {
-                    try {
-                        FileBlockRequestMessage message = downloadTasksManager.getNextBlockRequest();
-                        sendMessage(peer, message);
-                        System.out.println("Block request" + message + "enviado para " + peer.getIpString() + ":"
-                                + peer.getNodePort());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                 if (peer.getIpString().equals(r[0]) && peer.getNodePort() == Integer.parseInt(r[1])) {
+                     new Thread() {
+                        public void run() {
+                             try {
+                                while (true) {
+                                    if (!downloadTasksManager.getBlockRequests().isEmpty()) {
+                                        FileBlockRequestMessage request = downloadTasksManager.getNextBlockRequest();
+                                        sendMessage(peer, request);
+                                        System.out.println("Block answer" + request + "enviado para " + peer.getIpString() + ":"+ peer.getNodePort());
+                                         synchronized (downloadTasksManager) {
+                                            System.out.println("Thread" + getName() + "dormindo");
+                                             downloadTasksManager.wait();
+                                             System.out.println("Thread" + getName() + "acordada");
+                                        }
+                                     } else {
+                                        break;
+                                     }
+                                    
+                                }
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }}.start();
                 }
-            }.start(); */
-
+            }
         }
 
     }

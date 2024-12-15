@@ -19,8 +19,8 @@ public class File_Hash {
         return file;
     }
 
-    public byte[] getHash() {
-        return hash;
+    public int getHash() {
+        return hashCode();
     }
 
     public String getName() {
