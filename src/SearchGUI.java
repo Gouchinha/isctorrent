@@ -70,26 +70,26 @@ public class SearchGUI extends JFrame {
 
             public void actionPerformed(ActionEvent e) {
                 // Criar a nova janela
-                JFrame conectFrame = new JFrame("Conectar a nó");
-                conectFrame.setSize(300, 150);
-                conectFrame.setLayout(new BorderLayout());
-                conectFrame.setResizable(false);
-                conectFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Fecha apenas esta janela
-                conectFrame.setLocationRelativeTo(SearchGUI.this); // Centraliza em relação à janela principal
+                JFrame connectFrame = new JFrame("Conectar a nó");
+                connectFrame.setSize(300, 150);
+                connectFrame.setLayout(new BorderLayout());
+                connectFrame.setResizable(false);
+                connectFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Fecha apenas esta janela
+                connectFrame.setLocationRelativeTo(SearchGUI.this); // Centraliza em relação à janela principal
 
                 // Painel central para os campos de entrada
-                JPanel conectPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+                JPanel connectPanel = new JPanel(new GridLayout(2, 2, 5, 5));
                 JLabel addressLabel = new JLabel("Endereço:");
-                addressField = new JTextField("localhost", 10);
+                addressField = new JTextField("127.0.0.1", 10);
                 JLabel portLabel = new JLabel("Porta:");
                 portField = new JTextField("", 5); // Trocar JTextArea por JTextField (mais apropriado)
 
-                conectPanel.add(addressLabel);
-                conectPanel.add(addressField);
-                conectPanel.add(portLabel);
-                conectPanel.add(portField);
+                connectPanel.add(addressLabel);
+                connectPanel.add(addressField);
+                connectPanel.add(portLabel);
+                connectPanel.add(portField);
 
-                conectFrame.add(conectPanel, BorderLayout.CENTER);
+                connectFrame.add(connectPanel, BorderLayout.CENTER);
 
                 // Painel para os botões
                 JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -104,10 +104,10 @@ public class SearchGUI extends JFrame {
                             int port = Integer.parseInt(portField.getText());
                             // Simulação da conexão (completa o que está comentado no futuro)
                             fileNode.connectToPeer(address, port);
-                            //JOptionPane.showMessageDialog(conectFrame, "Ligado a: " + address + " na porta " + port);
-                            conectFrame.dispose(); // Fecha a janela após o sucesso
+                            //JOptionPane.showMessageDialog(connectFrame, "Ligado a: " + address + " na porta " + port);
+                            connectFrame.dispose(); // Fecha a janela após o sucesso
                         } catch (NumberFormatException ex) {
-                            JOptionPane.showMessageDialog(conectFrame, "Insira uma porta válida!", "Erro",
+                            JOptionPane.showMessageDialog(connectFrame, "Insira uma porta válida!", "Erro",
                                     JOptionPane.ERROR_MESSAGE);
                         }
                     }
@@ -118,16 +118,16 @@ public class SearchGUI extends JFrame {
                     public void actionPerformed(ActionEvent event) {
                         addressField.setText("");
                         portField.setText("");
-                        conectFrame.dispose(); // Fecha a janela ao cancelar
+                        connectFrame.dispose(); // Fecha a janela ao cancelar
                     }
                 });
 
                 buttonPanel.add(okButton);
                 buttonPanel.add(cancelButton);
-                conectFrame.add(buttonPanel, BorderLayout.SOUTH);
+                connectFrame.add(buttonPanel, BorderLayout.SOUTH);
 
                 // Torna a janela visível
-                conectFrame.setVisible(true);
+                connectFrame.setVisible(true);
             }
         });
     }
@@ -153,7 +153,7 @@ public class SearchGUI extends JFrame {
 
         @Override
         public String getElementAt(int index) {
-            return listModel.getElementAt(index).getFileName() + " (" + listModel.getElementAt(index).getNodeswithFile().toString();
+            return listModel.getElementAt(index).getFileName() + " (" + listModel.getElementAt(index).getNodesWithFile().toString();
         }
     });
     }

@@ -1,45 +1,58 @@
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
 import java.io.Serializable;
 
 public class SharedResultList implements Serializable {
 
-    private CopyOnWriteArrayList<FileSearchResult> results;
+    private List<FileSearchResult> finalResults;
     private transient CountDownLatch latch;
     private SearchGUI gui;
+    private final ReentrantLock lock = new ReentrantLock();
 
     public SharedResultList(int numberOfPeersWithFile, SearchGUI gui) {
-        this.results = new CopyOnWriteArrayList<>();
+        this.finalResults = new CopyOnWriteArrayList<>();
         this.latch = new CountDownLatch(numberOfPeersWithFile);
         this.gui = gui;
     }
 
-    public synchronized void add(List<FileSearchResult> result) {
-        System.out.println("Adding results to shared list");
-        
-        for (FileSearchResult r : result) {
-            if (results.isEmpty()) {
-                results.addAll(result);
-                break;
+    public void add(List<FileSearchResult> result) {
+        lock.lock();
+        System.out.println("Adding results to shared list - " + result.get(0).getNodePort());
+        try {
+            if (!finalResults.isEmpty()) {
+                for (FileSearchResult r : result) {
+                    processExistingResult(r);
+                }
+                latch.countDown(); // Decrement the latch count
+            } else {
+                finalResults.addAll(result);
+                latch.countDown(); // Decrement the latch count
             }
-            for (FileSearchResult existing : results) { // AQUI EM BAIXO VAI SER "&&" MAS PRECISAMOS CORRIGIR HASH
-                if (r.getFileName() == existing.getFileName() || r.getFileHash().equals(existing.getFileHash())) {
-                    existing.addNodeWithFile(new String[] {r.getNodeAddress(), String.valueOf(r.getNodePort())});
-                    break;
-                } else {
-                    results.add(r);
-                } 
-            }
-        }           
-        latch.countDown(); // Decrement the latch count
+        } finally {
+            lock.unlock();
+        }
+        synchronized (this) {
+            notifyAll();
+        }
     }
 
-    public void clear() {
-        results.clear();
+    private void processExistingResult(FileSearchResult r) {
+        for (FileSearchResult existing : finalResults) {
+            System.out.println("Result: " + r.getFileHash() + " - " + r.getFileName() + " - " + existing.getNodePort());
+            System.out.println("Comparing to" + existing.getFileHash() + " - " + existing.getFileName() + " - " + existing.getNodePort());
+            if (r.getFileHash().equals(existing.getFileHash()) || r.getFileName().equals(existing.getFileName())) {
+                System.out.println("Duplicate result found: " + existing.getFileName());
+                existing.addNodeWithFile(new String[] { r.getNodeAddress(), String.valueOf(r.getNodePort()) });
+            } else {
+                finalResults.add(r);
+                System.out.println("Result added: " + r.getFileName());
+            }
+        }
     }
 
-    public void waitAndGetResults() throws InterruptedException {
+    public synchronized void waitAndGetResults() throws InterruptedException {
         System.out.println("Waiting for final results...");
         try {
             latch.await(); // Wait until all peers have responded
@@ -47,7 +60,7 @@ public class SharedResultList implements Serializable {
             Thread.currentThread().interrupt();
             System.err.println("Thread interrupted: " + e.getMessage());
         }
-        System.out.println("Final Results arrived - " + results);
-        gui.updateSearchResults(results);
+        System.out.println("Final Results arrived - " + finalResults);
+        gui.updateSearchResults(finalResults);
     }
 }

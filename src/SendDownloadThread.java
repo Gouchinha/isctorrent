@@ -1,22 +1,17 @@
-import java.util.List;
 //import java.nio.file.Path;
-import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.Path;
 
 
 public class SendDownloadThread extends Thread {
 
-    private FileBlockRequestMessage message;
     private String directoryPath;
     private SharedSendDownload sharedSendDownload;
 
     public SendDownloadThread(FileBlockRequestMessage message, String directoryPath, SharedSendDownload sharedSendDownload) {
         System.out.println("SendDownloadThread initiated");
         super();
-        this.message = message;
         this.directoryPath = directoryPath;
         this.sharedSendDownload = sharedSendDownload;
     }

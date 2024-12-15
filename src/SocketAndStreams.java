@@ -9,7 +9,7 @@ public class SocketAndStreams implements Serializable {
     private ObjectInputStream in;
     private ObjectOutputStream out;
 
-    public SocketAndStreams(Socket socket, ObjectInputStream in, ObjectOutputStream out, String nome) {
+    public SocketAndStreams(Socket socket, ObjectInputStream in, ObjectOutputStream out) {
         this.socket = socket;
         this.in = in;
         this.out = out;

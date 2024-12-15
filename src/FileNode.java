@@ -13,7 +13,6 @@ public class FileNode implements Serializable {
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
     private List<SharedSendDownload> sharedSendDownloads;
-    private DownloadTasksManager downloadTasksManager;
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -23,7 +22,6 @@ public class FileNode implements Serializable {
         this.sharedResultList = null;
         this.threadPool = Executors.newFixedThreadPool(5);
         this.sharedSendDownloads = new ArrayList<>();
-        this.downloadTasksManager = null;
 
         System.out.println("Nó inicializado na porta: " + port);
 
@@ -74,7 +72,7 @@ public class FileNode implements Serializable {
                 ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
 
-                SocketAndStreams peer = new SocketAndStreams(clientSocket, in, out, clientSocket.getInetAddress().getHostName());
+                SocketAndStreams peer = new SocketAndStreams(clientSocket, in, out);
                 connectedPeers.add(peer);
 
                 // Inicia um thread para tratar mensagens do peer conectado
@@ -88,15 +86,23 @@ public class FileNode implements Serializable {
     }
 
     public void connectToPeer(String ipAddress, int peerPort) {
+        System.out.println("Conectando a " + ipAddress + ":" + peerPort);
         try {
             if (peerPort < 1 || peerPort > 65535) {
                 System.out.println("A porta deve estar entre 1 e 65535.");
                 return;
             }
 
-            if ((ipAddress.equals(InetAddress.getLocalHost().getHostAddress())
-                    || ipAddress.equals("localhost") || ipAddress.equals("127.0.0.1"))
-                    && peerPort == this.port) {
+            for (SocketAndStreams peer : connectedPeers) {
+                System.out.println("Peer: " + peer.getIpString() + ":" + peer.getNodePort());
+                if ((peer.getIpString().equals(ipAddress)) && peer.getNodePort() == peerPort) {
+                    System.out.println("Já conectado a " + ipAddress + ":" + peerPort);
+                    
+                    return;
+                }
+            }
+
+            if (isSelfConnection(ipAddress, peerPort)) {
                 System.out.println("Não é permitido conectar ao próprio nó.");
                 return;
             }
@@ -105,7 +111,7 @@ public class FileNode implements Serializable {
             ObjectOutputStream out = new ObjectOutputStream(peerSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(peerSocket.getInputStream());
 
-            SocketAndStreams peer = new SocketAndStreams(peerSocket, in, out, ipAddress);
+            SocketAndStreams peer = new SocketAndStreams(peerSocket, in, out);
             connectedPeers.add(peer);
 
             System.out.println("Conexão estabelecida com " + ipAddress + ":" + peerPort);
@@ -118,31 +124,22 @@ public class FileNode implements Serializable {
         }
     }
 
+    private boolean isSelfConnection(String ipAddress, int peerPort) {
+        try {
+            return (ipAddress.equals(InetAddress.getLocalHost().getHostAddress())
+                    || ipAddress.equals("localhost") || ipAddress.equals("127.0.0.1"))
+                    && peerPort == this.port;
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     private void handlePeer(SocketAndStreams peer) {
         try {
             while (true) {
                 Object message = peer.getObjectInputStream().readObject();
-                if (message instanceof WordSearchMessage) {
-                    handleWordSearchRequest((WordSearchMessage) message, peer);
-                } else if (message instanceof List<?>) {
-                    if (message instanceof List<?>) {
-                        List<?> list = (List<?>) message;
-                        if (!list.isEmpty() && list.get(0) instanceof FileSearchResult) {
-                            handleFileSearchResult((List<FileSearchResult>) list);
-                        } else {
-                            System.out.println("Não há resultados para a busca ");
-                            gui.updateSearchResults((List<FileSearchResult>) list); 
-                            JOptionPane.showMessageDialog(gui, "Nenhum resultado encontrado!");                       
-                        }
-                    } else {
-                        System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
-                    }
-                } else if (message instanceof FileBlockRequestMessage) {
-                    handleFileBlockRequest((FileBlockRequestMessage) message);
-                    System.out.println("FileBlockRequestMessage recebido");
-                } else {
-                    System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
-                }
+                handleMessage(message, peer);
             }
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Conexão encerrada com " + peer.getIpString());
@@ -152,6 +149,43 @@ public class FileNode implements Serializable {
             } catch (IOException ex) {
                 System.err.println("Erro ao fechar socket: " + ex.getMessage());
             }
+        }
+    }
+
+    private void handleMessage(Object message, SocketAndStreams peer) {
+        if (message instanceof WordSearchMessage) {
+            try {
+                handleWordSearchRequest((WordSearchMessage) message, peer);
+            } catch (IOException e) {
+                System.err.println("Erro ao processar WordSearchMessage: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else if (message instanceof List<?>) {
+            handleListMessage((List<?>) message);
+        } else if (message instanceof FileBlockRequestMessage) {
+            handleFileBlockRequest((FileBlockRequestMessage) message);
+            System.out.println("FileBlockRequestMessage recebido");
+        } else {
+            System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleListMessage(List<?> list) {
+        if (!list.isEmpty() && list.get(0) instanceof FileSearchResult) {
+            if (list.stream().allMatch(item -> item instanceof FileSearchResult)) {
+                new Thread() {
+                    public void run() {
+                        handleFileSearchResult((List<FileSearchResult>) list);
+                    }
+                }.start();
+            } else {
+                System.out.println("A lista não contém apenas FileSearchResult.");
+            }
+        } else {
+            System.out.println("Não há resultados para a busca ");
+            gui.updateSearchResults((List<FileSearchResult>) list); 
+            JOptionPane.showMessageDialog(gui, "Nenhum resultado encontrado!");                       
         }
     }
 
@@ -191,7 +225,7 @@ public class FileNode implements Serializable {
                         file_Hash.getName(),
                         file_Hash.getFile().length(),
                         file_Hash.getHash(),
-                        peer.getSocket().getInetAddress().getHostAddress(),
+                        peer.getSocket().getLocalAddress().getHostAddress(),
                         peer.getSocket().getLocalPort()));
             }
         }
@@ -204,30 +238,41 @@ public class FileNode implements Serializable {
     }
 
     public void startDownload(FileSearchResult result) {
-       downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
+        DownloadTasksManager downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(), fileLoader.getDirectoryPath(), result);
 
-       /* for (SocketAndStreams peer : getConnectedPeers()) {
+        /*  for (SocketAndStreams peer : getConnectedPeers()) {
             for (String[] r : result.getNodeswithFile().getList()) {
                 if (peer.getSocket().getInetAddress().getHostAddress().equals(r[0]) && peer.getSocket().getPort() == Integer.parseInt(r[1])) {
                     sendMessage(peer, downloadTasksManager);
                 }
             }
-         } */
-         for (SocketAndStreams peer : connectedPeers) {
-            new Thread() {
+         }  
+            */
+
+        for (SocketAndStreams peer : connectedPeers) {
+            System.out.println("Peer ID " + peer.getIpString() + ":" + peer.getNodePort());
+            for (String[] r : result.getNodesWithFile().getList()) {
+                System.out.println("Result ID " + r[0] + ":" + r[1]);
+                /* if (peer.getIpString().equals(r[0]) && peer.getNodePort() == Integer.parseInt(r[1])) {
+                    sendMessage(peer, downloadTasksManager);
+                    System.out.println("DownloadTasksManager enviado para " + peer.getIpString() + ":" + peer.getNodePort());
+                } */
+            }
+            /* new Thread() {
                 public void run() {
                     try {
                         FileBlockRequestMessage message = downloadTasksManager.getNextBlockRequest();
                         sendMessage(peer, message);
-                        System.out.println("Block request" + message + "enviado para " + peer.getIpString() + ":" + peer.getNodePort());
+                        System.out.println("Block request" + message + "enviado para " + peer.getIpString() + ":"
+                                + peer.getNodePort());
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-            }.start();
-            
+            }.start(); */
+
         }
-        
+
     }
 
     public void sendWordSearchRequest(String searchWord) {

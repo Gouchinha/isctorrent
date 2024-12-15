@@ -1,0 +1,14 @@
+{
+  "type": "dir",
+  "subNodes": {
+    "src": {
+      "type": "dir",
+      "subNodes": {
+        "SharedResultList.java": {
+          "type": "java",
+          "annotation": "hash como aidna está mal para testes está || mas deve ser &&"
+        }
+      }
+    }
+  }
+}

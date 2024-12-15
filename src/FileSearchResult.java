@@ -26,11 +26,12 @@ public class FileSearchResult implements Serializable {
     }
 
     public String[] addNodeWithFile(String[] node) {
+        System.out.println("Adicionando nó com arquivo: " + node[0] + ":" + node[1]);
         nodesWithFile.add(node);
         return node;
     }
 
-    public ListStringVector getNodeswithFile() {
+    public ListStringVector getNodesWithFile() {
         return nodesWithFile;
     }
 
