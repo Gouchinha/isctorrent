@@ -192,16 +192,7 @@ public class FileNode implements Serializable {
 
     private void handleFileBlockRequest(FileBlockRequestMessage request, SocketAndStreams peer) {
         String threadName = "SendDownloadThread-" + request.getDownloadIdentifier();
-        ThreadPoolQueue existingSharedSendDownload = null;
-
-        // Verificar se já existe um SharedSendDownload associado ao identificador
-        for (ThreadPoolQueue sharedSendDownload : sharedSendDownloads) {
-            if (sharedSendDownload.getIdentifier() == request.getDownloadIdentifier()) {
-                System.out.println("SharedSendDownload já existe para " + request.getDownloadIdentifier());
-                existingSharedSendDownload = sharedSendDownload;
-                break;
-            }
-        }
+        ThreadPoolQueue existingSharedSendDownload = findExistingSharedSendDownload(request);
 
         if (existingSharedSendDownload != null) {
             // Adicionar o novo pedido à queue da thread já existente
@@ -238,6 +229,16 @@ public class FileNode implements Serializable {
         sendDownloadThread.setName(threadName);
         threadPool.submit(sendDownloadThread);
         newSharedSendDownload.addBlockRequest(request); // Adicionar o primeiro bloco à queue
+    }
+
+    private ThreadPoolQueue findExistingSharedSendDownload(FileBlockRequestMessage request) {
+        for (ThreadPoolQueue sharedSendDownload : sharedSendDownloads) {
+            if (sharedSendDownload.getIdentifier() == request.getDownloadIdentifier()) {
+                System.out.println("SharedSendDownload já existe para " + request.getDownloadIdentifier());
+                return sharedSendDownload;
+            }
+        }
+        return null;
     }
 
     public void processRequest(FileBlockRequestMessage request, String directory, SocketAndStreams peer) throws InterruptedException {
