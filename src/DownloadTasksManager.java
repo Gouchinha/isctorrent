@@ -15,7 +15,7 @@ public class DownloadTasksManager implements Serializable {
         this.blockRequests = new ArrayList<>();
         this.downloadDirectory = downloadDirectory;
         this.blockAnswers = new ArrayList<>();
-        this.randomHash = new Random().nextInt(1000);
+        this.randomHash = new Random().nextInt(100000);
         this.randomHash = generateUniqueRandomHash();
         
 
