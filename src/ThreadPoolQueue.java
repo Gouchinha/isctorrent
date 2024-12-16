@@ -1,18 +1,14 @@
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 
-public class SharedSendDownload {
+
+public class ThreadPoolQueue {
 
     private final long identifier;
     private final BlockingQueue<FileBlockRequestMessage> queue = new LinkedBlockingQueue<>();
-    private volatile boolean active = true; // Flag para controlar o estado ativo
+    // private volatile boolean active = true; // Flag para controlar o estado ativo
 
-    public SharedSendDownload(long identifier) {
+    public ThreadPoolQueue(long identifier) {
         this.identifier = identifier;
     }
 

@@ -12,9 +12,8 @@ public class FileNode implements Serializable {
     private SearchGUI gui;
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
-    private SharedSendDownload sharedDownload;
     private DownloadTasksManager downloadTasksManager;
-    private List<SharedSendDownload> sharedSendDownloads = new ArrayList<>();
+    private List<ThreadPoolQueue> sharedSendDownloads = new ArrayList<>();
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -193,10 +192,10 @@ public class FileNode implements Serializable {
 
     private void handleFileBlockRequest(FileBlockRequestMessage request, SocketAndStreams peer) {
         String threadName = "SendDownloadThread-" + request.getDownloadIdentifier();
-        SharedSendDownload existingSharedSendDownload = null;
+        ThreadPoolQueue existingSharedSendDownload = null;
 
         // Verificar se já existe um SharedSendDownload associado ao identificador
-        for (SharedSendDownload sharedSendDownload : sharedSendDownloads) {
+        for (ThreadPoolQueue sharedSendDownload : sharedSendDownloads) {
             if (sharedSendDownload.getIdentifier() == request.getDownloadIdentifier()) {
                 System.out.println("SharedSendDownload já existe para " + request.getDownloadIdentifier());
                 existingSharedSendDownload = sharedSendDownload;
@@ -212,7 +211,7 @@ public class FileNode implements Serializable {
         }
 
         // Caso contrário, criar um novo SharedSendDownload
-        SharedSendDownload newSharedSendDownload = new SharedSendDownload(request.getDownloadIdentifier());
+        ThreadPoolQueue newSharedSendDownload = new ThreadPoolQueue(request.getDownloadIdentifier());
         sharedSendDownloads.add(newSharedSendDownload);
 
         // Criar uma nova thread para processar os pedidos dessa queue
