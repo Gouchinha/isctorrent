@@ -13,7 +13,7 @@ public class FileNode implements Serializable {
     private SharedResultList sharedResultList;
     private ExecutorService threadPool;
     private DownloadTasksManager downloadTasksManager;
-    private List<ThreadPoolQueue> sharedSendDownloads = new ArrayList<>();
+    private List<ThreadPoolQueue> threadPoolsQueues = new ArrayList<>();
 
     public FileNode(int port, String pastaDownload) throws IOException {
         this.port = port;
@@ -163,9 +163,8 @@ public class FileNode implements Serializable {
             handleListMessage((List<?>) message);
         } else if (message instanceof FileBlockRequestMessage) {
             handleFileBlockRequest((FileBlockRequestMessage) message , peer);
-            System.out.println("FileBlockRequestMessage recebido");
         } else if (message instanceof FileBlockAnswerMessage) {
-            downloadTasksManager.addBlockAnswer((FileBlockAnswerMessage) message);
+            handleFileBlockAnswer((FileBlockAnswerMessage) message);
         } else {
             System.out.println("Mensagem inválida recebida de " + peer.getIpString() + ": " + message);
         }
@@ -191,48 +190,57 @@ public class FileNode implements Serializable {
     }
 
     private void handleFileBlockRequest(FileBlockRequestMessage request, SocketAndStreams peer) {
+        System.out.println("Handling FileBlockRequestMessage from " + peer.getIpString());
+        System.out.println("Pedido de bloco recebido: " + request.getOffset());
         String threadName = "SendDownloadThread-" + request.getDownloadIdentifier();
-        ThreadPoolQueue existingSharedSendDownload = findExistingSharedSendDownload(request);
+        ThreadPoolQueue existingThreadPoolQueue = findExistingSharedSendDownload(request);
 
-        if (existingSharedSendDownload != null) {
+        if (existingThreadPoolQueue != null) {
             // Adicionar o novo pedido à queue da thread já existente
             System.out.println("Adicionando pedido à queue existente");
-            existingSharedSendDownload.addBlockRequest(request);
+            existingThreadPoolQueue.addBlockRequest(request);
             return;
-        }
 
-        // Caso contrário, criar um novo SharedSendDownload
-        ThreadPoolQueue newSharedSendDownload = new ThreadPoolQueue(request.getDownloadIdentifier());
-        sharedSendDownloads.add(newSharedSendDownload);
+        } else {
+                // Caso contrário, criar um novo SharedSendDownload
+            ThreadPoolQueue newThreadPoolQueue = new ThreadPoolQueue(request.getDownloadIdentifier());
+            threadPoolsQueues.add(newThreadPoolQueue);
 
-        // Criar uma nova thread para processar os pedidos dessa queue
-        Thread sendDownloadThread = new Thread(() -> {
-            try {
-                while (true) {
-                    FileBlockRequestMessage blockRequest = newSharedSendDownload.takeBlockRequest();
-                    if (blockRequest == null) { // Sinal de término
-                        break;
+            // Criar uma nova thread para processar os pedidos dessa queue
+            Thread sendDownloadThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        FileBlockRequestMessage blockRequest = newThreadPoolQueue.takeBlockRequest();
+                        if (blockRequest == null) { // Sinal de término
+                            break;
+                        }
+                        // Processar o pedido
+                        processRequest(blockRequest, fileLoader.getDirectoryPath(), peer);
                     }
-                    // Processar o pedido
-                    processRequest(blockRequest, fileLoader.getDirectoryPath(), peer);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Tratar interrupções
-            } finally {
-                // Remover o SharedSendDownload da lista ao terminar
-                synchronized (sharedSendDownloads) {
-                    sharedSendDownloads.remove(newSharedSendDownload);
-                }
-            }
-        });
 
-        sendDownloadThread.setName(threadName);
-        threadPool.submit(sendDownloadThread);
-        newSharedSendDownload.addBlockRequest(request); // Adicionar o primeiro bloco à queue
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); // Tratar interrupções
+                } finally {
+                    // Remover o SharedSendDownload da lista ao terminar
+                    synchronized (newThreadPoolQueue) {
+                        threadPoolsQueues.remove(newThreadPoolQueue);
+                    }
+                    System.out.println(threadName + " terminada");
+                }
+            });
+            sendDownloadThread.setName(threadName);
+            threadPool.submit(sendDownloadThread);
+            newThreadPoolQueue.addBlockRequest(request); // Adicionar o primeiro bloco à queue
+        } 
+    }
+
+    private void handleFileBlockAnswer(FileBlockAnswerMessage answer) {
+        System.out.println("Block answer received: " + answer.getBlockOffset() + " from " + answer.getFileHash());
+        downloadTasksManager.addBlockAnswer(answer);
     }
 
     private ThreadPoolQueue findExistingSharedSendDownload(FileBlockRequestMessage request) {
-        for (ThreadPoolQueue sharedSendDownload : sharedSendDownloads) {
+        for (ThreadPoolQueue sharedSendDownload : threadPoolsQueues) {
             if (sharedSendDownload.getIdentifier() == request.getDownloadIdentifier()) {
                 System.out.println("SharedSendDownload já existe para " + request.getDownloadIdentifier());
                 return sharedSendDownload;
@@ -308,42 +316,53 @@ public class FileNode implements Serializable {
     }
 
     public void startDownload(FileSearchResult result) {
-        downloadTasksManager = new DownloadTasksManager(result.getFileHash(),
-            result.getFileSize(),
-            fileLoader.getDirectoryPath(), 
-            result);
+        System.out.println("Iniciando download de " + result.getFileName());
+        downloadTasksManager = new DownloadTasksManager(result.getFileHash(),result.getFileSize(),fileLoader.getDirectoryPath(), result);
 
         for (SocketAndStreams peer : connectedPeers) {
             System.out.println("Peer ID " + peer.getIpString() + ":" + peer.getNodePort());
             for (String[] r : result.getNodesWithFile().getList()) {
                 System.out.println("Result ID " + r[0] + ":" + r[1]);
-                 if (peer.getIpString().equals(r[0]) && peer.getNodePort() == Integer.parseInt(r[1])) {
-                     new Thread() {
-                        public void run() {
-                             try {
-                                while (true) {
-                                    if (!downloadTasksManager.getBlockRequests().isEmpty()) {
-                                        FileBlockRequestMessage request = downloadTasksManager.getNextBlockRequest();
-                                        sendMessage(peer, request);
-                                        System.out.println("Block answer" + request + "enviado para " + peer.getIpString() + ":"+ peer.getNodePort());
-                                         synchronized (downloadTasksManager) {
-                                            System.out.println("Thread" + getName() + "dormindo");
-                                             downloadTasksManager.wait();
-                                             System.out.println("Thread" + getName() + "acordada");
-                                        }
-                                     } else {
-                                        break;
-                                     }
-                                    
-                                }
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                        }}.start();
+                 if (isPeerMatchingResult(peer, r)) {
+                     startDownloadThread(peer);
                 }
             }
         }
 
+    }
+
+    private boolean isPeerMatchingResult(SocketAndStreams peer, String[] r) {
+        return peer.getIpString().equals(r[0]) && peer.getNodePort() == Integer.parseInt(r[1]);
+    }
+
+    private void startDownloadThread(SocketAndStreams peer) {
+        Thread downloadThread = new Thread() {
+            public void run() {
+                try {
+                    System.out.println("Thread" + getName() + "iniciada");
+                    while (true) {
+                        if (!downloadTasksManager.getBlockRequests().isEmpty()) {
+                            FileBlockRequestMessage request = downloadTasksManager.getNextBlockRequest();
+                            System.out.println("Pedido de bloco enviado: " + request.getOffset() + " " + request.getFileHash());
+                            sendMessage(peer, request);
+                             synchronized (downloadTasksManager) {
+                                System.out.println(getName() + " dormindo");
+                                downloadTasksManager.wait();
+                                System.out.println(getName() + " acordada");
+                            }
+                        } else {
+                            System.out.println(getName() + "terminada");
+                            break;
+                        }
+                       
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        downloadThread.setName("DownloadThread-" + peer.getNodePort());
+        downloadThread.start();
     }
 
     public void sendWordSearchRequest(String searchWord) {

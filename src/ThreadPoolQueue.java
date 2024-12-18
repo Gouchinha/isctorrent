@@ -16,13 +16,21 @@ public class ThreadPoolQueue {
         return identifier;
     }
 
-    public void addBlockRequest(FileBlockRequestMessage request) {
+    public synchronized void addBlockRequest(FileBlockRequestMessage request) {
         System.out.println("Added block request to queue");
         queue.add(request);
+        notifyAll();
     }
 
-    public FileBlockRequestMessage takeBlockRequest() {
+    public synchronized FileBlockRequestMessage takeBlockRequest() {
         System.out.println("Took block request from queue");
+        if (queue.isEmpty()) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         return queue.poll();
     }
 

@@ -43,6 +43,10 @@ public class DownloadTasksManager implements Serializable {
         return new Random().nextInt(1000);
     }
 
+    public synchronized int getRemainingBlocks() {
+        return blockRequests.size();
+    }
+
     public synchronized List<FileBlockRequestMessage> getBlockRequests() {
         return blockRequests;
     }
@@ -64,7 +68,7 @@ public class DownloadTasksManager implements Serializable {
     }
 
     public synchronized void addBlockAnswer(FileBlockAnswerMessage message) {
-        System.out.println("Block answer received: " + message.getBlockOffset());
+        System.out.println("Block answer received: " + message.getBlockOffset() + " " + message.getFileHash());
         blockAnswers.add(message);
         latch.countDown();
         System.out.println("Blocks remaining: " + latch.getCount());
@@ -85,11 +89,11 @@ public class DownloadTasksManager implements Serializable {
                 // Sort the block answers by their offset
                 blockAnswers.sort(Comparator.comparingLong(FileBlockAnswerMessage::getBlockOffset));
                 for (FileBlockAnswerMessage answer : blockAnswers) {
-                    System.out.println("Block offset: " + answer.getFileHash() + answer.getBlockOffset());
+                    System.out.println("Block offset: " + answer.getBlockOffset() + " - Hash: " + answer.getFileHash());
                 }
 
                 // Create the output file
-                 File outputFile = new File(downloadDirectory, "downloaded_file");
+                 File outputFile = new File(downloadDirectory, "fioti.mp3" );
 
                 // Write all blocks to the file
                 try (FileOutputStream fos = new FileOutputStream(outputFile)) {
