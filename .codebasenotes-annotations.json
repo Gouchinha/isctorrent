@@ -11,6 +11,10 @@
         "FileNode.java": {
           "type": "java",
           "annotation": "threads de send Downlaod é que esperam por FileBlockRequests, nãoi a thread principal"
+        },
+        "ThreadPoolQueue.java": {
+          "type": "java",
+          "annotation": "takeBlockRequest pode ter problemas ao ir ver se há requests e ainda tar vazio"
         }
       }
     }
