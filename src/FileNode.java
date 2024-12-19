@@ -89,6 +89,7 @@ public class FileNode implements Serializable {
         try {
             if (peerPort < 1 || peerPort > 65535) {
                 System.out.println("A porta deve estar entre 1 e 65535.");
+                JOptionPane.showMessageDialog(gui, "A porta deve estar entre 1 e 65535.");
                 return;
             }
 
@@ -96,13 +97,14 @@ public class FileNode implements Serializable {
                 System.out.println("Peer: " + peer.getIpString() + ":" + peer.getNodePort());
                 if ((peer.getIpString().equals(ipAddress)) && peer.getNodePort() == peerPort) {
                     System.out.println("Já conectado a " + ipAddress + ":" + peerPort);
-                    
+                    JOptionPane.showMessageDialog(gui, "Já conectado a " + ipAddress + ":" + peerPort);
                     return;
                 }
             }
 
             if (isSelfConnection(ipAddress, peerPort)) {
                 System.out.println("Não é permitido conectar ao próprio nó.");
+                JOptionPane.showMessageDialog(gui, "Não é permitido conectar ao próprio nó.");
                 return;
             }
 
@@ -119,6 +121,7 @@ public class FileNode implements Serializable {
             handlePeerThread.start();
 
         } catch (IOException e) {
+            JOptionPane.showMessageDialog(gui, "Erro ao conectar com ou não existe" + ipAddress + ":" + peerPort + ": " + e.getMessage());
             System.err.println("Erro ao conectar com " + ipAddress + ":" + peerPort + ": " + e.getMessage());
         }
     }
