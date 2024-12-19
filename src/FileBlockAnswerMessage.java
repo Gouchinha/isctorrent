@@ -6,18 +6,30 @@ public class FileBlockAnswerMessage implements Serializable {
     private int fileHash;   // Identificador único do ficheiro (hash)
     private long blockOffset;  // Offset do início do bloco no ficheiro
     private byte[] blockData;  // Dados binários do bloco
-    private int blockSize;     // Tamanho real do bloco
+    private int blockSize; // Tamanho real do bloco
+    private String ipString;
+    private int port;
 
     public FileBlockAnswerMessage(int fileHash, long blockOffset, byte[] blockData, String ipString, int port) {
         this.fileHash = fileHash;
         this.blockOffset = blockOffset;
         this.blockData = blockData;
         this.blockSize = blockData.length;
+        this.port = port;
+        this.ipString = ipString;
     }
 
     // Getters
     public int getFileHash() {
         return fileHash;
+    }
+
+    public String getIpString() {
+        return ipString;
+    }
+
+    public int getPort(){
+        return port;
     }
 
     public long getBlockOffset() {

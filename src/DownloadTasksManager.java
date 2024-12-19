@@ -11,6 +11,7 @@ public class DownloadTasksManager implements Serializable {
     private int numBlocks; // Number of blocks to be downloaded
     private int randomHash;
     private transient CountDownLatch latch;
+    private FileSearchResult searchResult;
 
     public DownloadTasksManager(int fileHash, long fileSize, String downloadDirectory, FileSearchResult searchResults) {
         this.blockRequests = new ArrayList<>();
@@ -18,6 +19,7 @@ public class DownloadTasksManager implements Serializable {
         this.blockAnswers = new ArrayList<>();
         this.randomHash = new Random().nextInt(100000);
         this.randomHash = generateUniqueRandomHash();
+        this.searchResult = searchResults;
 
         // Divide the file into blocks
         long blockSize = 10240; // Default block size
@@ -75,6 +77,7 @@ public class DownloadTasksManager implements Serializable {
     }
 
     public void writeFileToDisk() {
+        long startTime = System.currentTimeMillis();
         System.out.println("Creating thread to write file to disk...");
         try {
             latch.await();
@@ -83,22 +86,23 @@ public class DownloadTasksManager implements Serializable {
             e.printStackTrace();
         }
 
-        System.out.println("All blocks received. Writing file to disk...");
+        System.out.println("All blocks received. Writing file to disk..." + blockAnswers.size() + " blocks");
 
         // Sort the block answers by their offset
         blockAnswers.sort(Comparator.comparingLong(FileBlockAnswerMessage::getBlockOffset));
         for (FileBlockAnswerMessage answer : blockAnswers) {
-            System.out.println("Block offset: " + answer.getBlockOffset() + " - Hash: " + answer.getFileHash());
+            int i = blockAnswers.indexOf(answer);
+            System.out.println("Block offset: " + answer.getBlockOffset() + " - Block nº = " + i + " - Hash: " + answer.getFileHash());
         }
 
-        // Create the output file
-        JFrame frame = new JFrame("File Name Input");
+        // Give a name pop up
+        /* JFrame frame = new JFrame("File Name Input");
         String fileName = JOptionPane.showInputDialog(frame, "Enter the name of the file to save:");
         if (fileName == null || fileName.trim().isEmpty()) {
             fileName = "defaultFileName.mp3"; // Default file name if user cancels or enters an empty name
-        }
+        } */
 
-        File outputFile = new File(downloadDirectory, fileName);
+        File outputFile = new File(downloadDirectory, searchResult.getFileName());  
 
         // Write all blocks to the file
         try (FileOutputStream fos = new FileOutputStream(outputFile)) {
@@ -110,11 +114,13 @@ public class DownloadTasksManager implements Serializable {
         }
         System.out.println("File written successfully: " + outputFile.getAbsolutePath());
 
+        long endTime = System.currentTimeMillis();
+
         // Count the number of blocks per node
         Map<String, Integer> nodeBlockCount = new HashMap<>();
         for (FileBlockAnswerMessage answer : blockAnswers) {
             // Assuming FileBlockAnswerMessage includes IP and port attributes
-            String nodeKey = String.format("endereco=127.0.0.1, porto=%d", 8080 + blockAnswers.indexOf(answer));
+            String nodeKey = String.format("endereco=%s, porto=%d", answer.getIpString(), answer.getPort());
             nodeBlockCount.put(nodeKey, nodeBlockCount.getOrDefault(nodeKey, 0) + 1);
         }
 
@@ -128,8 +134,9 @@ public class DownloadTasksManager implements Serializable {
         panel.add(new JLabel("Descarga completa."));
         for (Map.Entry<String, Integer> entry : nodeBlockCount.entrySet()) {
             panel.add(new JLabel(String.format("Fornecedor [%s]: %d blocos", entry.getKey(), entry.getValue())));
-        }
-        panel.add(new JLabel("Tempo decorrido: 8s")); // Replace 8 with the actual elapsed time
+        }        
+        long elapsedTime = (endTime - startTime) / 1000; // Convert milliseconds to seconds
+        panel.add(new JLabel("Tempo decorrido: " + elapsedTime + " segundos"));
 
         summaryFrame.add(panel);
         summaryFrame.setVisible(true);

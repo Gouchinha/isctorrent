@@ -56,11 +56,11 @@ public class SharedResultList implements Serializable {
         System.out.println("Waiting for final results...");
         try {
             latch.await(); // Wait until all peers have responded
+            System.out.println("Final Results arrived - " + finalResults);
+            gui.updateSearchResults(finalResults);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             System.err.println("Thread interrupted: " + e.getMessage());
         }
-        System.out.println("Final Results arrived - " + finalResults);
-        gui.updateSearchResults(finalResults);
     }
 }
