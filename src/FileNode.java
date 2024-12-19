@@ -311,12 +311,12 @@ public class FileNode implements Serializable {
     }
 
     private void handleFileSearchResult(List<FileSearchResult> results) {
-        System.out.println("Resultados da busca recebidos: " + results);
+        System.out.println("Search results received: " + results);
         sharedResultList.add(results);
     }
 
     public void startDownload(FileSearchResult result) {
-        System.out.println("Iniciando download de " + result.getFileName());
+        System.out.println("Starting download of " + result.getFileName());
         downloadTasksManager = new DownloadTasksManager(result.getFileHash(),result.getFileSize(),fileLoader.getDirectoryPath(), result);
 
         for (SocketAndStreams peer : connectedPeers) {
@@ -339,16 +339,16 @@ public class FileNode implements Serializable {
         Thread downloadThread = new Thread() {
             public void run() {
                 try {
-                    System.out.println("Thread" + getName() + "iniciada");
+                    System.out.println("Thread " + getName() + " started");
                     while (true) {
                         if (!downloadTasksManager.getBlockRequests().isEmpty()) {
                             FileBlockRequestMessage request = downloadTasksManager.getNextBlockRequest();
-                            System.out.println("Pedido de bloco enviado: " + request.getOffset() + " " + request.getFileHash());
+                            System.out.println("Block request sent: " + request.getOffset() + " " + request.getFileHash());
                             sendMessage(peer, request);
                              synchronized (downloadTasksManager) {
-                                System.out.println(getName() + " dormindo");
+                                System.out.println(getName() + " sleeping");
                                 downloadTasksManager.wait();
-                                System.out.println(getName() + " acordada");
+                                System.out.println(getName() + " awaked");
                             }
                         } else {
                             System.out.println(getName() + "terminada");
