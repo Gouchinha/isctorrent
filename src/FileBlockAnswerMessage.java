@@ -8,7 +8,7 @@ public class FileBlockAnswerMessage implements Serializable {
     private byte[] blockData;  // Dados binários do bloco
     private int blockSize;     // Tamanho real do bloco
 
-    public FileBlockAnswerMessage(int fileHash, long blockOffset, byte[] blockData) {
+    public FileBlockAnswerMessage(int fileHash, long blockOffset, byte[] blockData, String ipString, int port) {
         this.fileHash = fileHash;
         this.blockOffset = blockOffset;
         this.blockData = blockData;

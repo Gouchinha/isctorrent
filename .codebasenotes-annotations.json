@@ -6,11 +6,11 @@
       "subNodes": {
         "SharedResultList.java": {
           "type": "java",
-          "annotation": "hash como aidna está mal para testes está || mas deve ser &&"
+          "annotation": "hash como aidna está mal para testes está || mas deve ser &&\n\nA cena é que assim ficheiros com o mesmo conteúdo mas nomes diferentes, não vai a ambos os nós vai só a um"
         },
         "FileNode.java": {
           "type": "java",
-          "annotation": "threads de send Downlaod é que esperam por FileBlockRequests, nãoi a thread principal"
+          "annotation": ""
         },
         "ThreadPoolQueue.java": {
           "type": "java",

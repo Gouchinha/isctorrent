@@ -6,13 +6,13 @@ import java.util.List;
 
 public class SearchGUI extends JFrame {
     private JTextField searchField, addressField, portField;
-    private JButton searchButton, downloadButton, connectButton;
+    private JButton searchButton, downloadButton, connectButton, showPeersButton; // Add this line to declare the new button
     private JList<String> resultList;
     private DefaultListModel<FileSearchResult> listModel;
     private FileNode fileNode; // Referência para o nó
 
     public SearchGUI(FileNode fileNodeObject) {
-        setTitle("Pesquisa" + fileNodeObject.getPort());
+        setTitle("Isctorrent - Porto: " + fileNodeObject.getPort());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(500, 350);
         setLocationRelativeTo(null);
@@ -32,11 +32,13 @@ public class SearchGUI extends JFrame {
         searchPanel.add(searchButton, BorderLayout.EAST);
 
         // Painel de botões à direita
-        JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 5, 5)); // Adjust the grid layout to 3 rows
         downloadButton = new JButton("Descarregar");
         connectButton = new JButton("Ligar a Nó");
+        showPeersButton = new JButton("Mostrar Peers"); // Initialize the new button
         buttonPanel.add(downloadButton);
         buttonPanel.add(connectButton);
+        buttonPanel.add(showPeersButton); // Add the new button to the button panel
 
         // Adiciona componentes à janela
         getContentPane().setLayout(new BorderLayout(5, 5));
@@ -128,6 +130,17 @@ public class SearchGUI extends JFrame {
 
                 // Torna a janela visível
                 connectFrame.setVisible(true);
+            }
+        });
+
+        showPeersButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                List<SocketAndStreams> connectedPeers = fileNode.getConnectedPeers();
+                StringBuilder peersInfo = new StringBuilder("Peers conectados:\n");
+                for (SocketAndStreams peer : connectedPeers) {
+                    peersInfo.append(peer.getIpString()).append(":").append(peer.getNodePort()).append("\n");
+                }
+                JOptionPane.showMessageDialog(null, peersInfo.toString(), "Peers Conectados", JOptionPane.INFORMATION_MESSAGE);
             }
         });
     }

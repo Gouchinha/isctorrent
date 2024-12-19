@@ -263,7 +263,7 @@ public class FileNode implements Serializable {
             raf.close();
 
             // Create and send FileBlockAnswerMessage
-            FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(fileHash, offset, data);
+            FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(fileHash, offset, data, peer.getIpString(), peer.getNodePort());
             System.out.println("Block answer created: " + answerMessage.getBlockOffset());
 
             sendBlockAnswer(answerMessage, peer);

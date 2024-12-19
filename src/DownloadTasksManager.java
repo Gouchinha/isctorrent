@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import javax.swing.*;
 
 public class DownloadTasksManager implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -17,13 +18,11 @@ public class DownloadTasksManager implements Serializable {
         this.blockAnswers = new ArrayList<>();
         this.randomHash = new Random().nextInt(100000);
         this.randomHash = generateUniqueRandomHash();
-        
-
 
         // Divide the file into blocks
         long blockSize = 10240; // Default block size
         this.numBlocks = (int) Math.ceil((double) fileSize / blockSize);
-        this.latch = new CountDownLatch(numBlocks); 
+        this.latch = new CountDownLatch(numBlocks);
 
         for (long offset = 0; offset < fileSize; offset += blockSize) {
             int length = (int) Math.min(blockSize, fileSize - offset);
@@ -57,14 +56,14 @@ public class DownloadTasksManager implements Serializable {
 
     public synchronized List<FileBlockAnswerMessage> getBlockAnswers() {
         return blockAnswers;
-    }   
-    
+    }
+
     public String getDownloadDirectory() {
         return downloadDirectory;
     }
 
     public synchronized FileBlockRequestMessage getNextBlockRequest() throws InterruptedException {
-            return blockRequests.remove(0);
+        return blockRequests.remove(0);
     }
 
     public synchronized void addBlockAnswer(FileBlockAnswerMessage message) {
@@ -83,27 +82,56 @@ public class DownloadTasksManager implements Serializable {
             Thread.currentThread().interrupt();
             e.printStackTrace();
         }
-                
-                System.out.println("All blocks received. Writing file to disk...");
 
-                // Sort the block answers by their offset
-                blockAnswers.sort(Comparator.comparingLong(FileBlockAnswerMessage::getBlockOffset));
-                for (FileBlockAnswerMessage answer : blockAnswers) {
-                    System.out.println("Block offset: " + answer.getBlockOffset() + " - Hash: " + answer.getFileHash());
-                }
+        System.out.println("All blocks received. Writing file to disk...");
 
-                // Create the output file
-                 File outputFile = new File(downloadDirectory, "fioti.mp3" );
+        // Sort the block answers by their offset
+        blockAnswers.sort(Comparator.comparingLong(FileBlockAnswerMessage::getBlockOffset));
+        for (FileBlockAnswerMessage answer : blockAnswers) {
+            System.out.println("Block offset: " + answer.getBlockOffset() + " - Hash: " + answer.getFileHash());
+        }
 
-                // Write all blocks to the file
-                try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                    for (FileBlockAnswerMessage answer : blockAnswers) {
-                        fos.write(answer.getBlockData()); // Write block data to file
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                System.out.println("File written successfully: ");
-                //System.out.println("File written successfully: " + outputFile.getAbsolutePath());
+        // Create the output file
+        JFrame frame = new JFrame("File Name Input");
+        String fileName = JOptionPane.showInputDialog(frame, "Enter the name of the file to save:");
+        if (fileName == null || fileName.trim().isEmpty()) {
+            fileName = "defaultFileName.mp3"; // Default file name if user cancels or enters an empty name
+        }
+
+        File outputFile = new File(downloadDirectory, fileName);
+
+        // Write all blocks to the file
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+            for (FileBlockAnswerMessage answer : blockAnswers) {
+                fos.write(answer.getBlockData()); // Write block data to file
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("File written successfully: " + outputFile.getAbsolutePath());
+
+        // Count the number of blocks per node
+        Map<String, Integer> nodeBlockCount = new HashMap<>();
+        for (FileBlockAnswerMessage answer : blockAnswers) {
+            // Assuming FileBlockAnswerMessage includes IP and port attributes
+            String nodeKey = String.format("endereco=127.0.0.1, porto=%d", 8080 + blockAnswers.indexOf(answer));
+            nodeBlockCount.put(nodeKey, nodeBlockCount.getOrDefault(nodeKey, 0) + 1);
+        }
+
+        // Create a custom panel for the summary
+        JFrame summaryFrame = new JFrame("Transfer Summary");
+        summaryFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        summaryFrame.setSize(400, 300);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(new JLabel("Descarga completa."));
+        for (Map.Entry<String, Integer> entry : nodeBlockCount.entrySet()) {
+            panel.add(new JLabel(String.format("Fornecedor [%s]: %d blocos", entry.getKey(), entry.getValue())));
+        }
+        panel.add(new JLabel("Tempo decorrido: 8s")); // Replace 8 with the actual elapsed time
+
+        summaryFrame.add(panel);
+        summaryFrame.setVisible(true);
     }
 }
