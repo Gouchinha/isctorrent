@@ -19,16 +19,30 @@ public class SharedResultList implements Serializable {
 
     public void add(List<FileSearchResult> result) {
         lock.lock();
-        System.out.println("Adding results to shared list - " + result.get(0).getNodePort());
+        if (result.isEmpty()) {
+            System.out.println("Empty result received");
+            latch.countDown(); // Decrement the latch count
+            System.out.println("Latch count: " + latch.getCount());
+            lock.unlock();
+            notifyAll();
+            return;
+        } else {
+            System.out.println("Adding results to shared list - " + result.get(0).getNodePort());
+        }
+        
         try {
             if (!finalResults.isEmpty()) {
+                System.out.println("Processing existing results");
                 for (FileSearchResult r : result) {
                     processExistingResult(r);
                 }
                 latch.countDown(); // Decrement the latch count
+                System.out.println("Latch count: " + latch.getCount());
             } else {
+                System.out.println("Adding new results because final list is empty");
                 finalResults.addAll(result);
                 latch.countDown(); // Decrement the latch count
+                System.out.println("Latch count: " + latch.getCount()); 
             }
         } finally {
             lock.unlock();

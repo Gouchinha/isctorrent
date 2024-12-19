@@ -150,7 +150,7 @@ public class SearchGUI extends JFrame {
     listModel.clear(); // Limpa os resultados anteriores
     
     if (results.isEmpty()) {
-        // JOptionPane.showMessageDialog(this, "Nenhum resultado encontrado!");
+        JOptionPane.showMessageDialog(this, "Nenhum resultado encontrado!");
     } else {
         for (FileSearchResult result : results) {
             listModel.addElement(result);
