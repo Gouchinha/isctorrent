@@ -87,6 +87,9 @@ public class FileNode implements Serializable {
 
     public void connectToPeer(String ipAddress, int peerPort) {
         System.out.println("Conectando a " + ipAddress + ":" + peerPort);
+        if (ipAddress.equals("localhost")) {
+            ipAddress = "127.0.0.1";
+        }
         try {
             if (peerPort < 1 || peerPort > 65535) {
                 System.out.println("A porta deve estar entre 1 e 65535.");
