@@ -7,15 +7,15 @@ public class DownloadTasksManager implements Serializable {
     private static final long serialVersionUID = 1L;
     private List<FileBlockRequestMessage> blockRequests;
     private List<FileBlockAnswerMessage> blockAnswers;
-    private String downloadDirectory; // Destination directory for the file
+    private FileLoader fileLoader;
     private int numBlocks; // Number of blocks to be downloaded
     private int randomHash;
     private transient CountDownLatch latch;
     private FileSearchResult searchResult;
 
-    public DownloadTasksManager(int fileHash, long fileSize, String downloadDirectory, FileSearchResult searchResults) {
+    public DownloadTasksManager(int fileHash, long fileSize, FileLoader fileLoader, FileSearchResult searchResults) {
         this.blockRequests = new ArrayList<>();
-        this.downloadDirectory = downloadDirectory;
+        this.fileLoader = fileLoader;
         this.blockAnswers = new ArrayList<>();
         this.randomHash = new Random().nextInt(100000);
         this.randomHash = generateUniqueRandomHash();
@@ -61,7 +61,7 @@ public class DownloadTasksManager implements Serializable {
     }
 
     public String getDownloadDirectory() {
-        return downloadDirectory;
+        return fileLoader.getDirectoryPath();
     }
 
     public synchronized FileBlockRequestMessage getNextBlockRequest() throws InterruptedException {
@@ -102,7 +102,7 @@ public class DownloadTasksManager implements Serializable {
             fileName = "defaultFileName.mp3"; // Default file name if user cancels or enters an empty name
         } */
 
-        File outputFile = new File(downloadDirectory, searchResult.getFileName());  
+        File outputFile = new File(fileLoader.getDirectoryPath(), searchResult.getFileName());  
 
         // Write all blocks to the file
         try (FileOutputStream fos = new FileOutputStream(outputFile)) {
@@ -115,6 +115,12 @@ public class DownloadTasksManager implements Serializable {
         System.out.println("File written successfully: " + outputFile.getAbsolutePath());
 
         long endTime = System.currentTimeMillis();
+        
+        try {
+            fileLoader.loadFiles(); // Reload the files in the directory
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         // Count the number of blocks per node
         Map<String, Integer> nodeBlockCount = new HashMap<>();

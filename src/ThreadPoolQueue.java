@@ -23,14 +23,15 @@ public class ThreadPoolQueue {
     }
 
     public synchronized FileBlockRequestMessage takeBlockRequest() {
-        System.out.println("Took block request from queue");
         if (queue.isEmpty()) {
             try {
+                System.out.println("Waiting for block request in queue to take");
                 wait();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        System.out.println("Took block request from queue");
         return queue.poll();
     }
 

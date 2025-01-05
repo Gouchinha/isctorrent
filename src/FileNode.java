@@ -154,7 +154,7 @@ public class FileNode implements Serializable {
                 handleMessage(message, peer);
             }
         } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Conexão encerrada com " + peer.getIpString());
+            System.err.println("Conexão encerrada com " + peer.getIpString() + ":" + peer.getNodePort() + ": " + e.getMessage());
             connectedPeers.remove(peer);
             try {
                 peer.getSocket().close();
@@ -193,7 +193,7 @@ public class FileNode implements Serializable {
     }
 
     private void handleFileBlockRequest(FileBlockRequestMessage request, SocketAndStreams peer) {
-        System.out.println("Handling FileBlockRequestMessage from " + peer.getIpString());
+        System.out.println("Handling FileBlockRequestMessage from " + peer.getIpString() + ":" + peer.getNodePort());
         System.out.println("Pedido de bloco recebido: " + request.getOffset());
         String threadName = "SendDownloadThread-" + request.getDownloadIdentifier();
         ThreadPoolQueue existingThreadPoolQueue = findExistingSharedSendDownload(request);
@@ -323,7 +323,7 @@ public class FileNode implements Serializable {
     public void startDownload(FileSearchResult result) {
         System.out.println("Starting download of " + result.getFileName());
         downloadTasksManager = new DownloadTasksManager(result.getFileHash(), result.getFileSize(),
-                fileLoader.getDirectoryPath(), result);
+                fileLoader, result);
 
         for (SocketAndStreams peer : connectedPeers) {
             System.out.println("Peer ID " + peer.getIpString() + ":" + peer.getNodePort());

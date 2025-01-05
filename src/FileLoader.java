@@ -16,33 +16,34 @@ public class FileLoader {
     }
 
     // Método para carregar ficheiros e armazená-los na lista de files
-    private void loadFiles() throws IOException {
-    File directory = new File(directoryPath);
-    if (isValidDirectory(directory)) {
-        loadFilesFromDirectory(directory);
-    } else {
-        System.out.println("Diretório não encontrado: " + directoryPath);
+    public void loadFiles() throws IOException {
+        File directory = new File(directoryPath);
+        if (isValidDirectory(directory)) {
+            loadFilesFromDirectory(directory);
+        } else {
+            System.out.println("Diretório não encontrado: " + directoryPath);
+        }
     }
-}
 
-private boolean isValidDirectory(File directory) {
-    return directory.exists() && directory.isDirectory();
-}
+    private boolean isValidDirectory(File directory) {
+        return directory.exists() && directory.isDirectory();
+    }
 
-private void loadFilesFromDirectory(File directory) {
-    File[] fileArray = directory.listFiles();
-    if (fileArray != null) {
-        for (File file : fileArray) {
-            if (file.isFile()) {
-                try {
-                    files.add(new File_Hash(file));
-                } catch (IOException e) {
-                    e.printStackTrace();
+    private void loadFilesFromDirectory(File directory) {
+        files.clear();
+        File[] fileArray = directory.listFiles();
+        if (fileArray != null) {
+            for (File file : fileArray) {
+                if (file.isFile()) {
+                    try {
+                        files.add(new File_Hash(file));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
     }
-}
 
     // Retorna a lista de objetos File
     public List<File_Hash> getFiles() {
@@ -62,4 +63,3 @@ private void loadFilesFromDirectory(File directory) {
         return fileNames;
     }
 }
-
