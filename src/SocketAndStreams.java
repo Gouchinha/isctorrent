@@ -8,6 +8,7 @@ public class SocketAndStreams implements Serializable {
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
+    private int peerPort;
 
     public SocketAndStreams(Socket socket, ObjectInputStream in, ObjectOutputStream out) {
         this.socket = socket;
@@ -15,12 +16,16 @@ public class SocketAndStreams implements Serializable {
         this.out = out;
     }
 
+    public void setPort(int port) {
+        this.peerPort = port;
+    }
+
     public Socket getSocket() {
         return socket;
     }
 
     public int getNodePort() {
-        return socket.getPort();
+        return peerPort;
     }
 
     public ObjectInputStream getObjectInputStream() {

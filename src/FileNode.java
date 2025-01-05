@@ -112,8 +112,9 @@ public class FileNode implements Serializable {
             Socket peerSocket = new Socket(ipAddress, peerPort);
             ObjectOutputStream out = new ObjectOutputStream(peerSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(peerSocket.getInputStream());
-
             SocketAndStreams peer = new SocketAndStreams(peerSocket, in, out);
+            peer.setPort(peerPort);
+            sendMessage(peer, port);
             connectedPeers.add(peer);
 
             System.out.println("Conexão estabelecida com " + ipAddress + ":" + peerPort);
@@ -143,6 +144,10 @@ public class FileNode implements Serializable {
         try {
             while (true) {
                 Object message = peer.getObjectInputStream().readObject();
+                if (message instanceof Integer) {
+                    System.out.println("Porta " + message + " recebida de " + peer.getIpString());
+                    peer.setPort((Integer) message); // Atualiza a porta do peer 
+                }
                 handleMessage(message, peer);
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -260,7 +265,7 @@ public class FileNode implements Serializable {
 
             // Create and send FileBlockAnswerMessage
             FileBlockAnswerMessage answerMessage = new FileBlockAnswerMessage(fileHash, offset, data,
-                    peer.getIpString(), peer.getNodePort());
+                    peer.getIpString(), port);
             System.out.println("Block answer created: " + answerMessage.getBlockOffset());
 
             sendBlockAnswer(answerMessage, peer);
@@ -301,7 +306,7 @@ public class FileNode implements Serializable {
                         file_Hash.getFile().length(),
                         file_Hash.getHash(),
                         peer.getSocket().getLocalAddress().getHostAddress(),
-                        peer.getSocket().getLocalPort()));
+                        port));
             }
         }
         sendMessage(peer, (Serializable) results);
@@ -341,8 +346,7 @@ public class FileNode implements Serializable {
                     while (true) {
                         if (!downloadTasksManager.getBlockRequests().isEmpty()) {
                             FileBlockRequestMessage request = downloadTasksManager.getNextBlockRequest();
-                            System.out.println(
-                                    "Block request sent: " + request.getOffset() + " " + request.getFileHash());
+                            System.out.println("Block request sent to " + peer.getNodePort() + ": " + request.getOffset() + " " + request.getFileHash());
                             sendMessage(peer, request);
                             synchronized (downloadTasksManager) {
                                 System.out.println(getName() + " sleeping");
@@ -388,8 +392,7 @@ public class FileNode implements Serializable {
         try {
             peer.getObjectOutputStream().writeObject(message);
             peer.getObjectOutputStream().flush();
-            System.out
-                    .println("Mensagem enviada para " + peer.getIpString() + ":" + peer.getNodePort() + ": " + message);
+            System.out.println("Mensagem enviada para " + peer.getIpString() + ":" + peer.getNodePort() + ": " + message);
         } catch (IOException e) {
             System.err.println("Erro ao enviar mensagem para " + peer.getIpString() + ":" + peer.getNodePort() + ": "
                     + e.getMessage());
